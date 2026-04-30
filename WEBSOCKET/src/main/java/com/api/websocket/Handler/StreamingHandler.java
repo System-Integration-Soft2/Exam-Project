@@ -23,12 +23,22 @@ public class StreamingHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
-        int orderId = Integer.parseInt(payload.trim());
+        int orderId;
+
+        // Ikke indtastet et gyldigt heltal
+        try{
+            orderId = Integer.parseInt(payload.trim());
+        } catch (NumberFormatException e) {
+            session.sendMessage(new TextMessage("Fejl i ordre ID format. Vær sikker på at du sender et gyldigt heltal."));
+            session.close();
+            return;
+        }
 
         Optional<Order> optionalOrder = orderRepository.findById(orderId);
 
+        // Order ikke fundet
         if (optionalOrder.isEmpty()) {
-            session.sendMessage(new TextMessage("Ordre ikke fundet"));
+            session.sendMessage(new TextMessage("Ordre med id" + orderId + "blev ikke fundet"));
             session.close();
             return;
         }
@@ -42,6 +52,13 @@ public class StreamingHandler extends TextWebSocketHandler {
         };
 
         Order order = optionalOrder.get();
+
+        // Hvis ordren allerede er leveret, send en besked og luk forbindelsen
+        if (order.getStatus().equals("DELIVERED")) {
+            session.sendMessage(new TextMessage("Ordre er allerede leveret. Ingen yderligere opdateringer."));
+            session.close();
+            return;
+        }
 
         for (String[] update: updates) {
             // Opdater status i databasen

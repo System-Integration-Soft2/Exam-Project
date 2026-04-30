@@ -5,18 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6c75375b-0cdf-4685-8d8c-5e05ab737e23" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Entity/Order.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/StreamingHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Repository/OrderRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/dto/OrderUpdate.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/resources/data.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WEBSOCKET/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WEBSOCKET/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Config/Handler/UnaryHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/UnaryHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Config/WebSocketConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Config/WebSocketConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/StreamingHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/StreamingHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/UnaryHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/UnaryHandler.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -87,7 +78,7 @@
       <option name="presentableId" value="Default" />
       <updated>1777542289401</updated>
       <workItem from="1777542290481" duration="35000" />
-      <workItem from="1777542515290" duration="6205000" />
+      <workItem from="1777542515290" duration="7262000" />
     </task>
     <servers />
   </component>

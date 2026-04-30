@@ -24,9 +24,25 @@ public class UnaryHandler extends TextWebSocketHandler {
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         System.out.println("Received message: " + payload);
-        int orderId = Integer.parseInt(payload.trim());
+        int orderId;
+
+        // Ikke indtastet et gyldigt heltal
+        try{
+            orderId = Integer.parseInt(payload.trim());
+        } catch (NumberFormatException e) {
+            session.sendMessage(new TextMessage("Fejl i ordre ID format. Vær sikker på at du sender et gyldigt heltal."));
+            session.close();
+            return;
+        }
 
         Optional<Order> order = orderRepository.findById(orderId);
+
+        // Order ikke fundet
+        if (order.isEmpty()) {
+            session.sendMessage(new TextMessage("Ordre med id" + orderId + " blev ikke fundet"));
+            session.close();
+            return;
+        }
 
         if (order.isPresent()) {
             OrderUpdate response = new OrderUpdate(orderId, order.get().getStatus(), order.get().getMessage());
