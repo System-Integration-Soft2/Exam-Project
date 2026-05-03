@@ -1,13 +1,32 @@
 syntax = "proto3";
 
-package book;
+package order;
 
-rpc service OrderService {
+
+option java_package = "order";
+option java_multiple_files = true;
+
+service OrderService {
   rpc GetOrderStatus (GetOrderStatusRequest) returns (GetOrderStatusResponse);
-  rpc TrackOrder (TrackOrderRequest) returns (stream TrackOrderResponse);
+  rpc TrackOrder (stream TrackOrderRequest) returns (stream TrackOrderResponse);
 }
 
 message GetOrderStatusRequest {
   string order_id = 1;
+}
 
+message GetOrderStatusResponse {
+  string order_id = 1;
+  string order_status = 2;
+  string message = 3;
+}
+
+message TrackOrderRequest {
+  string order_id = 1;
+}
+
+message TrackOrderResponse {
+  string order_id = 1;
+  string order_status = 2;
+  string location = 3;
 }
