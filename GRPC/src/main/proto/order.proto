@@ -9,5 +9,5 @@ rpc service OrderService {
 
 message GetOrderStatusRequest {
   string order_id = 1;
-  
+
 }
