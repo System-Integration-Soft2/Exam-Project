@@ -22,10 +22,10 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 
         registry.addHandler(unaryHandler, "/ws/order/status" )
-                .setAllowedOrigins("*");
+                        .setAllowedOrigins("localhost:3000");
 
         registry.addHandler(streamingHandler, "/ws/order/track" )
-                .setAllowedOrigins("*");
+                .setAllowedOrigins("localhost:3000");
 
     }
 }
