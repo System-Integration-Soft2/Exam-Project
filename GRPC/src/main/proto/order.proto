@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package book;
+
+rpc service OrderService {
+  rpc GetOrderStatus (GetOrderStatusRequest) returns (GetOrderStatusResponse);
+  rpc TrackOrder (TrackOrderRequest) returns (stream TrackOrderResponse);
+}
+
+message GetOrderStatusRequest {
+  string order_id = 1;
+  
+}
