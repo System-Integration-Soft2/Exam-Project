@@ -16,7 +16,31 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
 
     @Override
     public void getOrderStatus(order.GetOrderStatusRequest request, StreamObserver<order.GetOrderStatusResponse> responseObserver) {
-    int orderId = Integer.parseInt(request.getOrderId());
+        String orderIdStr = request.getOrderId();
+
+        // Valider at order_id ikke er tom eller null
+        if (orderIdStr == null || orderIdStr.isBlank()) {
+            responseObserver.onError(
+                    io.grpc.Status.INVALID_ARGUMENT
+                            .withDescription("Order ID cannot be empty")
+                            .asRuntimeException()
+            );
+            return;
+        }
+
+        // Valider at order_id er et gyldigt tal
+        int orderId;
+        try {
+            orderId = Integer.parseInt(orderIdStr);
+        } catch (NumberFormatException e) {
+            responseObserver.onError(
+                    io.grpc.Status.INVALID_ARGUMENT
+                            .withDescription("Order ID must be a valid number")
+                            .asRuntimeException()
+            );
+            return;
+        }
+
         var foundOrder = orderRepository.findById(orderId);
 
         if (foundOrder.isEmpty()) {
@@ -46,8 +70,36 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
         return new StreamObserver<order.TrackOrderRequest>() {
             @Override
             public void onNext(order.TrackOrderRequest request) {
-                int orderId = Integer.parseInt(request.getOrderId());
-                var foundOrder = orderRepository.findById(orderId);
+                String orderIdStr1 = request.getOrderId();
+
+                // Valider at order_id ikke er tom eller null
+                if (orderIdStr1 == null || orderIdStr1.isBlank()) {
+                    responseObserver.onError(
+                            io.grpc.Status.INVALID_ARGUMENT
+                                    .withDescription("Order ID cannot be empty")
+                                    .asRuntimeException()
+                    );
+                    return;
+                }
+
+                // Valider at order_id er et gyldigt tal
+                int orderId1;
+                try {
+                    orderId1 = Integer.parseInt(orderIdStr1);
+                } catch (NumberFormatException e) {
+                    responseObserver.onError(
+                            io.grpc.Status.INVALID_ARGUMENT
+                                    .withDescription("Order ID must be a valid number")
+                                    .asRuntimeException()
+                    );
+                    return;
+                }
+
+
+
+                var foundOrder = orderRepository.findById(orderId1);
+
+                // Valider at ordren findes
 
                 if (foundOrder.isEmpty()) {
                     responseObserver.onError(
@@ -72,6 +124,7 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
             @Override
             public void onError(Throwable t) {
                 System.out.println("Client error: " + t.getMessage());
+                responseObserver.onError(t);
             }
 
             @Override
