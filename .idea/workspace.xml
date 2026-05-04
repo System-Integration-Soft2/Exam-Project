@@ -5,14 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="530b3bc9-318b-44d8-85aa-ae54ede71d02" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/GRPC/src/main/java/com/api/grpc/Entity/Order.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/GRPC/src/main/java/com/api/grpc/Repository/OrderRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/GRPC/src/main/java/com/api/grpc/Service/OrderServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/GRPC/src/main/resources/data.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/GRPC/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/GRPC/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/GRPC/src/main/proto/order.proto" beforeDir="false" afterPath="$PROJECT_DIR$/GRPC/src/main/proto/order.proto" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/GRPC/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/GRPC/src/main/resources/application.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,20 +40,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "gRPC",
-    "kotlin-language-version-configured": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;gRPC&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="GrpcApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="GRPC" />
@@ -87,7 +81,8 @@
       <updated>1777811612079</updated>
       <workItem from="1777811613399" duration="82000" />
       <workItem from="1777811825700" duration="226000" />
-      <workItem from="1777812120571" duration="4836000" />
+      <workItem from="1777812120571" duration="11210000" />
+      <workItem from="1777906254541" duration="5514000" />
     </task>
     <servers />
   </component>

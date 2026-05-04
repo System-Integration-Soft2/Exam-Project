@@ -1,3 +1,6 @@
+// Food Delivery Order Service
+// Handles order status and real time tracking
+
 syntax = "proto3";
 
 package order;
@@ -6,11 +9,15 @@ package order;
 option java_package = "order";
 option java_multiple_files = true;
 
-service OrderService {
-  rpc GetOrderStatus (GetOrderStatusRequest) returns (GetOrderStatusResponse);
-  rpc TrackOrder (stream TrackOrderRequest) returns (stream TrackOrderResponse);
+
+enum OrderStatus {
+  PENDING = 0;
+  SHIPPED = 1;
+  DELIVERED = 2;
+  CANCELLED = 3;
 }
 
+// Defining data structures for order status and tracking
 message GetOrderStatusRequest {
   string order_id = 1;
 }
@@ -29,4 +36,11 @@ message TrackOrderResponse {
   string order_id = 1;
   string order_status = 2;
   string location = 3;
+}
+
+// Defining API methods for order service
+
+service OrderService {
+  rpc GetOrderStatus (GetOrderStatusRequest) returns (GetOrderStatusResponse);
+  rpc TrackOrder (stream TrackOrderRequest) returns (stream TrackOrderResponse);
 }
