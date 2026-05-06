@@ -23,7 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy application code
+# Copy shared schema file and application code
+COPY seed.sql ./seed.sql
 COPY REST/app ./app
 
 # Expose port

@@ -1,18 +1,80 @@
+"""FastAPI application entry point: lifespan wiring and core endpoints."""
+
+from __future__ import annotations
+
+import logging
 from contextlib import asynccontextmanager
+
+import redis.exceptions
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+
 from app.utils.config import Settings
+from app.utils.db import get_db_connection, init_db
+from app.utils.redis_client import close_redis, init_redis, ping_redis
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.settings = Settings()
+    """Startup: Settings → init_db → Redis ping. Shutdown: close Redis."""
+    # Settings must be instantiated first; ValidationError exits before any I/O.
+    settings = Settings()
+    app.state.settings = settings
+
+    await init_db(settings)
+
+    redis_client = await init_redis(settings.REDIS_URL)
+    app.state.redis = redis_client
+
     yield
+
+    await close_redis(redis_client)
 
 
 app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/healthz")
-def healthz():
-    """Liveness probe."""
-    return {"status": "ok"}
+async def healthz():
+    """Liveness and readiness probe.
+
+    Checks both the SQLite database (SELECT 1) and Redis (PING).
+    Returns 200 with {"db": "ok", "redis": "ok"} when both are healthy.
+    Returns 503 with error details when either dependency is unavailable.
+    """
+    settings = app.state.settings
+    db_status = "ok"
+    redis_status = "ok"
+    errors: dict[str, str] = {}
+
+    try:
+        conn = await get_db_connection(settings.DATABASE_PATH)
+        try:
+            await conn.execute("SELECT 1")
+        finally:
+            await conn.close()
+    except Exception as exc:
+        db_status = "error"
+        errors["db"] = str(exc)
+        logger.error("Health check: database unavailable: %s", exc)
+
+    try:
+        await ping_redis(app.state.redis)
+    except redis.exceptions.ConnectionError as exc:
+        redis_status = "error"
+        errors["redis"] = str(exc)
+        logger.error("Health check: Redis unavailable: %s", exc)
+    except Exception as exc:
+        redis_status = "error"
+        errors["redis"] = str(exc)
+        logger.error("Health check: Redis error: %s", exc)
+
+    if db_status == "ok" and redis_status == "ok":
+        return {"db": "ok", "redis": "ok"}
+
+    body: dict = {"db": db_status, "redis": redis_status}
+    if errors:
+        body["errors"] = errors
+    return JSONResponse(status_code=503, content=body)
