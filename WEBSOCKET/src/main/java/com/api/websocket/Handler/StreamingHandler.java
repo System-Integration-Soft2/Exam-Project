@@ -10,6 +10,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -43,13 +44,7 @@ public class StreamingHandler extends TextWebSocketHandler {
             return;
         }
 
-        String[][] updates = {
-                {"PREPARING", "Restauranten er ved at forberede din mad..."},
-                {"PICKED_UP", "Din mad er klar og rider er på vej!"},
-                {"DELIVERING", "Rideren er 500m væk"},
-                {"DELIVERING", "Rideren er 200m væk"},
-                {"DELIVERED", "LEVERET! God appetit 🍕"}
-        };
+
 
         Order order = optionalOrder.get();
 
@@ -60,18 +55,17 @@ public class StreamingHandler extends TextWebSocketHandler {
             return;
         }
 
-        for (String[] update: updates) {
-            // Opdater status i databasen
-            order.setStatus(update[0]);
-            order.setMessage(update[1]);
-            orderRepository.save(order);
+        // Simulerer opdateringer ved at sende den aktuelle status for ordren og derefter sende opdateringer hver 2. sekund
+        List<Order> orders = orderRepository.findAll();
 
-
-            // Send opdateringer til klienten
-            OrderUpdate response = new OrderUpdate(orderId, order.getStatus(), order.getMessage());
+        for (Order currentOrder : orders) {
+            OrderUpdate response = new OrderUpdate(
+                    currentOrder.getId(),
+                    currentOrder.getStatus(),
+                    currentOrder.getMessage()
+            );
             String jsonResponse = objectMapper.writeValueAsString(response);
             session.sendMessage(new TextMessage(jsonResponse));
-
             Thread.sleep(2000);
         }
 
