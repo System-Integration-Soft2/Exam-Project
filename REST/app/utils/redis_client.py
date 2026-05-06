@@ -6,11 +6,7 @@ _DENYLIST_PREFIX = "rest:jwt:denylist:"
 
 
 def denylist_key(jti: str) -> str:
-    """Return the Redis key for a JWT denylist entry.
-
-    The 'rest:' prefix scopes this key to the REST service namespace,
-    preventing collisions with sibling services on the shared Redis instance.
-    """
+    """Return the Redis key for a JWT denylist entry."""
     return f"{_DENYLIST_PREFIX}{jti}"
 
 
@@ -52,9 +48,6 @@ async def denylist_exists(client: aioredis.Redis, jti: str) -> bool:
 
 async def ping_redis(client: aioredis.Redis) -> bool:
     """Send a PING to Redis and return True on success.
-
     Raises redis.exceptions.ConnectionError if the server is unreachable.
-    The caller is responsible for handling the exception — this function
-    does not mask connectivity failures.
     """
     return await client.ping()
