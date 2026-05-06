@@ -6,11 +6,12 @@ import logging
 from contextlib import asynccontextmanager
 
 import redis.exceptions
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.utils.config import Settings
 from app.utils.db import get_db_connection, init_db
+from app.utils.exceptions import register_exception_handlers
 from app.utils.redis_client import close_redis, init_redis, ping_redis
 
 logger = logging.getLogger(__name__)
@@ -18,22 +19,34 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: Settings → init_db → Redis ping. Shutdown: close Redis."""
-    # Settings must be instantiated first; ValidationError exits before any I/O.
     settings = Settings()
     app.state.settings = settings
-
     await init_db(settings)
-
     redis_client = await init_redis(settings.REDIS_URL)
     app.state.redis = redis_client
-
     yield
-
     await close_redis(redis_client)
 
 
 app = FastAPI(lifespan=lifespan)
+
+register_exception_handlers(app)
+
+
+@app.exception_handler(redis.exceptions.ConnectionError)
+async def redis_connection_error_handler(
+    request: Request, exc: redis.exceptions.ConnectionError
+) -> JSONResponse:
+    """Return 503 when Redis is unreachable during a request."""
+    logger.error("Redis connection error: %s", exc)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Auth substrate unavailable", "code": "service_unavailable"},
+    )
+
+
+from app.routers.auth import router as auth_router  # noqa: E402
+app.include_router(auth_router)
 
 
 @app.get("/healthz")
