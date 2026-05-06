@@ -1,7 +1,18 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from app.utils.config import Settings
 
-app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"message": "REST API"}
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.settings = Settings()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/healthz")
+def healthz():
+    """Liveness probe."""
+    return {"status": "ok"}

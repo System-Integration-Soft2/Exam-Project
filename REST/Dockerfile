@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-# Build stage
 FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /app
@@ -8,23 +6,25 @@ WORKDIR /app
 RUN pip install --no-cache-dir poetry
 
 # Copy dependency files
-COPY pyproject.toml poetry.lock* ./
+COPY REST/pyproject.toml REST/poetry.lock* ./
 
 # Install dependencies to the system
 RUN poetry config virtualenvs.create false \
     && poetry install --only main --no-root --no-interaction --no-ansi
 
-# Runtime stage
 FROM python:3.12-slim-bookworm
 
 WORKDIR /app
+
+# Install curl for the docker-compose healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY ./app ./app
+COPY REST/app ./app
 
 # Expose port
 EXPOSE 8000
