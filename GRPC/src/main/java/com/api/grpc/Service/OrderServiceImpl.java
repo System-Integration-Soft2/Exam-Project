@@ -66,65 +66,66 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
     }
 
     @Override
-    public StreamObserver<order.TrackOrderRequest> trackOrder(StreamObserver<order.TrackOrderResponse> responseObserver) {
-        return new StreamObserver<order.TrackOrderRequest>() {
+    public StreamObserver<TrackOrderRequest> trackOrder(
+            StreamObserver<TrackOrderResponse> responseObserver) {
+
+        return new StreamObserver<TrackOrderRequest>() {
+
             @Override
-            public void onNext(order.TrackOrderRequest request) {
-                String orderIdStr1 = request.getOrderId();
+            public void onNext(TrackOrderRequest request) {
+                int orderId = Integer.parseInt(request.getOrderId());
 
-                // Valider at order_id ikke er tom eller null
-                if (orderIdStr1 == null || orderIdStr1.isBlank()) {
-                    responseObserver.onError(
-                            io.grpc.Status.INVALID_ARGUMENT
-                                    .withDescription("Order ID cannot be empty")
-                                    .asRuntimeException()
-                    );
-                    return;
-                }
+                // Start polling i en separat tråd
+                new Thread(() -> {
+                    String lastStatus = "";
 
-                // Valider at order_id er et gyldigt tal
-                int orderId1;
-                try {
-                    orderId1 = Integer.parseInt(orderIdStr1);
-                } catch (NumberFormatException e) {
-                    responseObserver.onError(
-                            io.grpc.Status.INVALID_ARGUMENT
-                                    .withDescription("Order ID must be a valid number")
-                                    .asRuntimeException()
-                    );
-                    return;
-                }
+                    try {
+                        while (true) {
+                            var foundOrder = orderRepository.findById(orderId);
 
+                            if (foundOrder.isEmpty()) {
+                                responseObserver.onError(
+                                        io.grpc.Status.NOT_FOUND
+                                                .withDescription("Order not found")
+                                                .asRuntimeException()
+                                );
+                                return;
+                            }
 
+                            var orders = foundOrder.get();
+                            String currentStatus = orders.getStatus();
 
-                var foundOrder = orderRepository.findById(orderId1);
+                            // Send kun opdatering hvis status har ændret sig
+                            if (!currentStatus.equals(lastStatus)) {
+                                TrackOrderResponse response = TrackOrderResponse.newBuilder()
+                                        .setOrderId(String.valueOf(orders.getOrderId()))
+                                        .setLocation(orders.getLocation())
+                                        .setStatus(currentStatus)
+                                        .build();
 
-                // Valider at ordren findes
+                                responseObserver.onNext(response);
+                                lastStatus = currentStatus;
+                            }
 
-                if (foundOrder.isEmpty()) {
-                    responseObserver.onError(
-                            io.grpc.Status.NOT_FOUND
-                                    .withDescription("Order not found")
-                                    .asRuntimeException()
-                    );
-                    return;
-                }
+                            // Stop hvis ordren er leveret
+                            if (currentStatus.equals("DELIVERED")) {
+                                responseObserver.onCompleted();
+                                return;
+                            }
 
-                var orders = foundOrder.get();
-
-                order.TrackOrderResponse response = order.TrackOrderResponse.newBuilder()
-                        .setOrderId(String.valueOf(orders.getOrderId()))
-                        .setOrderStatus(orders.getStatus())
-                        .setLocation(orders.getLocation())
-                        .build();
-
-                responseObserver.onNext(response);
+                            Thread.sleep(2000); // Poll hvert 2. sekund
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    } catch (Exception e) {
+                        responseObserver.onError(e);
+                    }
+                }).start();
             }
 
             @Override
             public void onError(Throwable t) {
-                System.out.println("Client error: " + t.getMessage());
-                responseObserver.onError(t);
+                System.err.println("Client error: " + t.getMessage());
             }
 
             @Override
@@ -132,6 +133,7 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
                 responseObserver.onCompleted();
             }
         };
+    }
 
     }
 }
