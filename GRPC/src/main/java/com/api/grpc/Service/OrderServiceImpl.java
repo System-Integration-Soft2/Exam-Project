@@ -1,6 +1,7 @@
 package com.api.grpc.Service;
 
 import com.api.grpc.Repository.OrderRepository;
+import com.api.grpc.Security.SecurityUtils;
 import net.devh.boot.grpc.server.service.GrpcService;
 import io.grpc.stub.StreamObserver;
 import order.OrderServiceGrpc;
@@ -57,8 +58,8 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
 
         order.GetOrderStatusResponse response = order.GetOrderStatusResponse.newBuilder()
                 .setOrderId(String.valueOf(orders.getOrderId()))
-                .setOrderStatus(orders.getStatus())
-                .setMessage(orders.getMessage())
+                .setOrderStatus(SecurityUtils.sanitize(orders.getStatus()))
+                .setMessage(SecurityUtils.sanitize(orders.getMessage()))
                 .build();
 
         responseObserver.onNext(response);
@@ -99,8 +100,8 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
                             if (!currentStatus.equals(lastStatus)) {
                                 TrackOrderResponse response = TrackOrderResponse.newBuilder()
                                         .setOrderId(String.valueOf(orders.getOrderId()))
-                                        .setLocation(orders.getLocation())
-                                        .setStatus(currentStatus)
+                                        .setLocation(SecurityUtils.sanitize(orders.getLocation()))
+                                        .setStatus(SecurityUtils.sanitize(orders.getStatus()))
                                         .build();
 
                                 responseObserver.onNext(response);
