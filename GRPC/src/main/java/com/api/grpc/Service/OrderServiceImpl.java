@@ -5,6 +5,8 @@ import com.api.grpc.Security.SecurityUtils;
 import net.devh.boot.grpc.server.service.GrpcService;
 import io.grpc.stub.StreamObserver;
 import order.OrderServiceGrpc;
+import order.TrackOrderRequest;
+import order.TrackOrderResponse;
 
 @GrpcService
 public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
@@ -101,7 +103,7 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
                                 TrackOrderResponse response = TrackOrderResponse.newBuilder()
                                         .setOrderId(String.valueOf(orders.getOrderId()))
                                         .setLocation(SecurityUtils.sanitize(orders.getLocation()))
-                                        .setStatus(SecurityUtils.sanitize(orders.getStatus()))
+                                        .setOrderStatus(SecurityUtils.sanitize(orders.getStatus()))
                                         .build();
 
                                 responseObserver.onNext(response);
@@ -137,4 +139,3 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
     }
 
     }
-}
