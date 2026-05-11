@@ -43,7 +43,7 @@ async def list_genres_endpoint(
         page=page,
         size=effective_size,
         total=total,
-        links=page_links("/api/v1/genres", page, effective_size, total, q),
+        links=page_links("/api/v1/genres", page, effective_size, total, q=q),
     )
 
 

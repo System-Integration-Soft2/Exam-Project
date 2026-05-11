@@ -17,15 +17,18 @@ def login_link() -> LinksMap:
     return {"login": Link(href="/api/v1/auth/login", method="POST")}
 
 
-def page_links(base_path: str, page: int, size: int, total: int, q: str | None) -> LinksMap:
+def page_links(base_path: str, page: int, size: int, total: int, **filters) -> LinksMap:
     """Build pagination _links for a list envelope (self, first, last, next?, prev?).
 
     first and last are omitted when total is 0 — there are no pages to navigate.
+    Keyword filters (e.g. q="hello", movie_id=1) are appended to every navigation URL;
     """
+    active = {k: v for k, v in filters.items() if v not in (None, "")}
+
     def _href(p: int) -> str:
         href = f"{base_path}?page={p}&size={size}"
-        if q:
-            href += f"&q={q}"
+        for key, value in active.items():
+            href += f"&{key}={value}"
         return href
 
     links: LinksMap = {"self": Link(href=_href(page), method="GET")}

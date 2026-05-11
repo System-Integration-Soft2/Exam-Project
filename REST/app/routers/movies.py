@@ -88,7 +88,7 @@ async def list_movies_endpoint(
         page=page,
         size=effective_size,
         total=total,
-        links=page_links("/api/v1/movies", page, effective_size, total, q),
+        links=page_links("/api/v1/movies", page, effective_size, total, q=q),
     )
     return envelope
 
