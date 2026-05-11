@@ -45,8 +45,10 @@ async def redis_connection_error_handler(
 
 from app.routers.auth import router as auth_router
 from app.routers.movies import router as movies_router
+from app.routers.genres import router as genres_router
 app.include_router(auth_router)
 app.include_router(movies_router)
+app.include_router(genres_router)
 
 
 @app.get("/healthz")
