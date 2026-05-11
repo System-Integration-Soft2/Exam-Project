@@ -96,7 +96,7 @@ async def get_current_user(token: str, db, redis_client, settings):
     Raises redis.exceptions.ConnectionError if Redis is unreachable (fail loud — 503).
     """
     from app.utils.redis_client import denylist_exists
-    from app.utils.models import UserInternal
+    from app.models import UserInternal
 
     payload = decode_token(token, settings)
 

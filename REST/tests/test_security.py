@@ -15,7 +15,7 @@ from tests.conftest import TEST_JWT_SECRET
 def make_settings(monkeypatch):
     monkeypatch.setenv("JWT_SECRET", TEST_JWT_SECRET)
     monkeypatch.setenv("DATABASE_PATH", "/tmp")
-    from app.utils.config import Settings
+    from app.config import Settings
     return Settings(_env_file=None)
 
 

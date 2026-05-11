@@ -29,7 +29,7 @@ def make_valid_env(**overrides):
 
 def build_settings(monkeypatch, **overrides):
     """Monkeypatch env vars and instantiate Settings without loading .env."""
-    from app.utils.config import Settings
+    from app.config import Settings
 
     env = make_valid_env(**overrides)
     for k, v in env.items():
@@ -40,7 +40,7 @@ def build_settings(monkeypatch, **overrides):
 class TestJwtSecretValidation:
     def test_jwt_secret_below_32_chars_raises(self, monkeypatch):
         """JWT_SECRET shorter than 32 chars must raise ValidationError."""
-        from app.utils.config import Settings
+        from app.config import Settings
 
         env = make_valid_env(JWT_SECRET="short_secret_31_chars_xxxxxxxxx")
         assert len(env["JWT_SECRET"]) == 31
@@ -57,7 +57,7 @@ class TestJwtSecretValidation:
 
     def test_jwt_secret_unset_raises(self, monkeypatch):
         """JWT_SECRET has no default; missing env var must raise ValidationError."""
-        from app.utils.config import Settings
+        from app.config import Settings
 
         env = make_valid_env()
         env.pop("JWT_SECRET")
@@ -72,7 +72,7 @@ class TestJwtSecretValidation:
 class TestDatabasePathValidation:
     def test_database_path_parent_must_exist(self, monkeypatch):
         """DATABASE_PATH whose parent directory does not exist must raise ValidationError."""
-        from app.utils.config import Settings
+        from app.config import Settings
 
         env = make_valid_env(DATABASE_PATH="/nonexistent_dir_xyz/catalog.db")
         for k, v in env.items():
@@ -105,7 +105,7 @@ class TestCorsOriginsValidation:
         Wildcard origins with credentials are a browser security error;
         every origin must be named explicitly.
         """
-        from app.utils.config import Settings
+        from app.config import Settings
 
         env = make_valid_env(CORS_ALLOWED_ORIGINS="*")
         for k, v in env.items():
@@ -116,7 +116,7 @@ class TestCorsOriginsValidation:
 
     def test_cors_wildcard_in_list_rejected(self, monkeypatch):
         """A wildcard mixed into a comma-separated list must also be rejected."""
-        from app.utils.config import Settings
+        from app.config import Settings
 
         env = make_valid_env(CORS_ALLOWED_ORIGINS="http://localhost:3000,*")
         for k, v in env.items():
@@ -128,7 +128,7 @@ class TestCorsOriginsValidation:
 class TestTokenTtlValidation:
     def test_access_token_ttl_below_minimum_raises(self, monkeypatch):
         """ACCESS_TOKEN_TTL_SECONDS < 60 must raise ValidationError."""
-        from app.utils.config import Settings
+        from app.config import Settings
 
         env = make_valid_env(ACCESS_TOKEN_TTL_SECONDS="59")
         for k, v in env.items():
@@ -138,7 +138,7 @@ class TestTokenTtlValidation:
 
     def test_access_token_ttl_above_maximum_raises(self, monkeypatch):
         """ACCESS_TOKEN_TTL_SECONDS > 3600 must raise ValidationError."""
-        from app.utils.config import Settings
+        from app.config import Settings
 
         env = make_valid_env(ACCESS_TOKEN_TTL_SECONDS="3601")
         for k, v in env.items():
@@ -148,7 +148,7 @@ class TestTokenTtlValidation:
 
     def test_refresh_token_ttl_below_minimum_raises(self, monkeypatch):
         """REFRESH_TOKEN_TTL_SECONDS < 3600 must raise ValidationError."""
-        from app.utils.config import Settings
+        from app.config import Settings
 
         env = make_valid_env(REFRESH_TOKEN_TTL_SECONDS="3599")
         for k, v in env.items():
@@ -158,7 +158,7 @@ class TestTokenTtlValidation:
 
     def test_refresh_token_ttl_above_maximum_raises(self, monkeypatch):
         """REFRESH_TOKEN_TTL_SECONDS > 2592000 must raise ValidationError."""
-        from app.utils.config import Settings
+        from app.config import Settings
 
         env = make_valid_env(REFRESH_TOKEN_TTL_SECONDS="2592001")
         for k, v in env.items():

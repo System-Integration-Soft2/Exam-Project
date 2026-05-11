@@ -21,7 +21,7 @@ def make_settings(tmp_path, monkeypatch):
     monkeypatch.setenv("SEED_ADMIN_USERNAME", "admin")
     monkeypatch.setenv("SEED_ADMIN_EMAIL", "admin@example.com")
     monkeypatch.setenv("SEED_ADMIN_PASSWORD", "admin123")
-    from app.utils.config import Settings
+    from app.config import Settings
     return Settings(_env_file=None)
 
 

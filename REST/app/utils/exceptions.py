@@ -1,10 +1,11 @@
 from __future__ import annotations
-import re
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.utils.models import Link, LinksMap
+from app.utils.links import list_link, login_link
+from app.models.common import LinksMap
 
 
 class AppError(Exception):
@@ -28,31 +29,19 @@ class AppError(Exception):
         self.links = links
 
 
-def _build_list_link(path: str) -> LinksMap:
-    """Build a _links.list entry by stripping the trailing /{id} segment from path."""
-    # Strip trailing path segment that looks like an ID (numeric or slug)
-    list_path = re.sub(r"/[^/]+$", "", path) or path
-    return {"list": Link(href=list_path, method="GET")}
-
-
-def _build_login_link() -> LinksMap:
-    """Build a _links.login entry pointing at the login endpoint."""
-    return {"login": Link(href="/api/v1/auth/login", method="POST")}
-
-
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     """Convert AppError into the structured {detail, code, _links?} envelope."""
     links = exc.links
 
     if exc.status == 404 and links is None:
-        links = _build_list_link(request.url.path)
+        links = list_link(request.url.path)
 
     if exc.status == 401:
-        login_link = _build_login_link()
+        ll = login_link()
         if links is None:
-            links = login_link
+            links = ll
         else:
-            links = {**links, **login_link}
+            links = {**links, **ll}
 
     body: dict = {"detail": exc.detail, "code": exc.code}
     if links is not None:

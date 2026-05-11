@@ -1,5 +1,3 @@
-"""Auth service: login, refresh rotation, and logout flows."""
-
 from __future__ import annotations
 
 import time
@@ -7,7 +5,7 @@ import time
 import bcrypt
 
 from app.utils.exceptions import AppError
-from app.utils.models import TokenPair
+from app.models import TokenPair
 from app.utils.redis_client import denylist_exists, denylist_set
 from app.utils.security import (
     DUMMY_HASH,

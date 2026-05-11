@@ -56,6 +56,20 @@ async def init_db(settings, seed_sql_path: str = "seed.sql") -> None:
         else:
             logger.debug("Users table already populated; skipping admin seed.")
 
+        # Seed the fixture tester user used by Postman/pytest non-admin tests.
+        # Hardcoded credentials (tester/tester123) — not configurable because every
+        # environment uses the same well-known test account.
+        cursor = await conn.execute("SELECT COUNT(*) FROM users WHERE username = ?", ("tester",))
+        tester_count = (await cursor.fetchone())[0]
+        if tester_count == 0:
+            tester_hash = bcrypt.hashpw(b"tester123", bcrypt.gensalt()).decode("utf-8")
+            await conn.execute(
+                "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'user')",
+                ("tester", "tester@example.com", tester_hash),
+            )
+            await conn.commit()
+            logger.info("Fixture tester user seeded.")
+
         # Step 3: sample reviews (REST-specific; guarded by row count)
         cursor = await conn.execute("SELECT COUNT(*) FROM reviews")
         review_count = (await cursor.fetchone())[0]

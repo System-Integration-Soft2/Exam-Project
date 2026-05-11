@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.services.auth_service import login, logout, refresh
 from app.utils.db import get_db
-from app.utils.models import LogoutRequest, RefreshRequest, TokenPair, UserInternal
+from app.models import LogoutRequest, RefreshRequest, TokenPair, UserInternal
 from app.utils.security import get_current_user, oauth2_scheme
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])

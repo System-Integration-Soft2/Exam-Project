@@ -1,5 +1,3 @@
-"""FastAPI application entry point: lifespan wiring and core endpoints."""
-
 from __future__ import annotations
 
 import logging
@@ -9,7 +7,7 @@ import redis.exceptions
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.utils.config import Settings
+from app.config import Settings
 from app.utils.db import get_db_connection, init_db
 from app.utils.exceptions import register_exception_handlers
 from app.utils.redis_client import close_redis, init_redis, ping_redis
@@ -45,8 +43,10 @@ async def redis_connection_error_handler(
     )
 
 
-from app.routers.auth import router as auth_router  # noqa: E402
+from app.routers.auth import router as auth_router
+from app.routers.movies import router as movies_router
 app.include_router(auth_router)
+app.include_router(movies_router)
 
 
 @app.get("/healthz")

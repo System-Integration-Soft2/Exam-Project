@@ -24,7 +24,7 @@ def _env(monkeypatch, db_path):
 
 async def _seed_db(db_path, monkeypatch):
     _env(monkeypatch, db_path)
-    from app.utils.config import Settings
+    from app.config import Settings
     from app.utils.db import init_db
     settings = Settings(_env_file=None)
     await init_db(settings, seed_sql_path=SEED_SQL_PATH)
