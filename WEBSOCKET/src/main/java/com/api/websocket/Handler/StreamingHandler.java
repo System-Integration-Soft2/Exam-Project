@@ -39,7 +39,7 @@ public class StreamingHandler extends TextWebSocketHandler {
 
         // Film ikke fundet
         if (movieOrder.isEmpty()) {
-            session.sendMessage(new TextMessage("Film med id" + movieId + "blev ikke fundet"));
+            session.sendMessage(new TextMessage("Film med id " + movieId + " blev ikke fundet"));
             session.close();
             return;
         }

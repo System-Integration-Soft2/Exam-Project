@@ -5,13 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6c75375b-0cdf-4685-8d8c-5e05ab737e23" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Entity/Order.java" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Entity/Movie.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/StreamingHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/StreamingHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/UnaryHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Handler/UnaryHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Repository/OrderRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/Repository/MovieRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/dto/OrderUpdate.java" beforeDir="false" afterPath="$PROJECT_DIR$/WEBSOCKET/src/main/java/com/api/websocket/dto/MovieUpdate.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -85,7 +80,7 @@
       <workItem from="1777542515290" duration="7604000" />
       <workItem from="1777807186539" duration="64000" />
       <workItem from="1778654056577" duration="1536000" />
-      <workItem from="1778692867676" duration="1882000" />
+      <workItem from="1778692867676" duration="3414000" />
     </task>
     <servers />
   </component>
