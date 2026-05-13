@@ -1,0 +1,1685 @@
+{
+  "info": {
+    "name": "REST API — Exam Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Full acceptance suite for the FastAPI REST service. Run top-to-bottom against a live stack (docker compose up). The tester user is auto-seeded by init_db on startup."
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "admin_username", "value": "admin", "type": "string" },
+    { "key": "admin_password", "value": "admin123", "type": "string" },
+    { "key": "tester_username", "value": "tester", "type": "string" },
+    { "key": "tester_password", "value": "tester123", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "refresh_token", "value": "", "type": "string" },
+    { "key": "old_refresh_token", "value": "", "type": "string" },
+    { "key": "regular_user_token", "value": "", "type": "string" },
+    { "key": "revoked_access_token", "value": "", "type": "string" },
+    { "key": "movie_id", "value": "", "type": "string" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-refresh access_token if it is expired or missing.",
+          "// The Login test populates the token on first run,",
+          "// so this guard only fires on subsequent runs where the token has expired.",
+          "const token = pm.collectionVariables.get('access_token');",
+          "if (!token) { return; }",
+          "",
+          "try {",
+          "    const parts = token.split('.');",
+          "    if (parts.length !== 3) { return; }",
+          "    const payload = JSON.parse(atob(parts[1]));",
+          "    const nowSec = Math.floor(Date.now() / 1000);",
+          "    if (payload.exp && payload.exp > nowSec + 30) { return; }",
+          "",
+          "    // Token is expired (or within 30-second buffer) — refresh it.",
+          "    const refreshToken = pm.collectionVariables.get('refresh_token');",
+          "    if (!refreshToken) { return; }",
+          "",
+          "    const baseUrl = pm.collectionVariables.get('base_url');",
+          "    pm.sendRequest({",
+          "        url: baseUrl + '/api/v1/auth/refresh',",
+          "        method: 'POST',",
+          "        header: { 'Content-Type': 'application/json' },",
+          "        body: { mode: 'raw', raw: JSON.stringify({ refresh_token: refreshToken }) }",
+          "    }, function (err, res) {",
+          "        if (err || res.code !== 200) { return; }",
+          "        const body = res.json();",
+          "        pm.collectionVariables.set('access_token', body.access_token);",
+          "        pm.collectionVariables.set('refresh_token', body.refresh_token);",
+          "    });",
+          "} catch (e) {",
+          "    // Malformed token — let the request proceed and fail naturally.",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth — Login",
+      "item": [
+        {
+          "name": "POST /login with admin credentials returns 200 with token pair",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "{{admin_username}}", "type": "text" },
+                { "key": "password", "value": "{{admin_password}}", "type": "text" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has access_token, refresh_token, token_type=bearer, expires_in=900', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('access_token');",
+                  "    pm.expect(body).to.have.property('refresh_token');",
+                  "    pm.expect(body.token_type).to.equal('bearer');",
+                  "    pm.expect(body.expires_in).to.equal(900);",
+                  "});",
+                  "",
+                  "// Save tokens for downstream tests",
+                  "const body = pm.response.json();",
+                  "if (body.access_token) {",
+                  "    pm.collectionVariables.set('access_token', body.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                  "    pm.collectionVariables.set('old_refresh_token', body.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login with wrong password returns 401 unauthorized",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "{{admin_username}}", "type": "text" },
+                { "key": "password", "value": "wrongpassword", "type": "text" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Body code is unauthorized', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login with unknown user returns 401 unauthorized",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "nobody_at_all", "type": "text" },
+                { "key": "password", "value": "whatever", "type": "text" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Body code is unauthorized (same generic message as wrong-password for timing equalisation)', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login with missing password returns 422 validation_error",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "admin", "type": "text" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Body code is validation_error with non-empty errors array', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('validation_error');",
+                  "    pm.expect(body.errors).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login with JSON body returns 422 validation_error",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"admin\", \"password\": \"admin123\"}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// FastAPI returns 422 when form data is expected but JSON is sent.",
+                  "// The endpoint uses OAuth2PasswordRequestForm which requires form-encoding;",
+                  "// JSON triggers Pydantic form-validation failure before content-type checking.",
+                  "pm.test('Status is 422 (form-encoded required; JSON triggers validation failure)', () => {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Body code is validation_error', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('validation_error');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth — Refresh",
+      "item": [
+        {
+          "name": "POST /refresh with valid refresh_token returns 200 with new token pair",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refresh_token\": \"{{refresh_token}}\"}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has new access_token and refresh_token', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('access_token');",
+                  "    pm.expect(body).to.have.property('refresh_token');",
+                  "});",
+                  "",
+                  "// Save the new token pair; old_refresh_token is preserved for the revocation test",
+                  "const body = pm.response.json();",
+                  "if (body.access_token) {",
+                  "    pm.collectionVariables.set('access_token', body.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /refresh with previously-rotated refresh_token returns 401 token_revoked",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refresh_token\": \"{{old_refresh_token}}\"}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Body code is token_revoked (old refresh token was rotated away)', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('token_revoked');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /refresh with access token as refresh_token returns 401",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refresh_token\": \"{{access_token}}\"}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401 (access token rejected at refresh endpoint)', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /refresh with missing body returns 422 validation_error",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Body code is validation_error', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('validation_error');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth — Logout",
+      "item": [
+        {
+          "name": "POST /logout with valid tokens returns 204",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refresh_token\": \"{{refresh_token}}\"}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Save the current access_token before logout so test 14 can verify it is revoked.",
+                  "pm.collectionVariables.set('revoked_access_token', pm.collectionVariables.get('access_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204 No Content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /logout without Authorization header returns 401",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refresh_token\": \"{{refresh_token}}\"}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401 (no Authorization header)', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /logout with revoked access token returns 401 token_revoked",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{revoked_access_token}}", "type": "string" }]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refresh_token\": \"{{refresh_token}}\"}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Body code is token_revoked (access token was denylisted at the prior logout)', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('token_revoked');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Movies",
+      "item": [
+        {
+          "name": "Re-login as admin to restore tokens after logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "{{admin_username}}", "type": "text" },
+                { "key": "password", "value": "{{admin_password}}", "type": "text" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Re-login as admin succeeds with 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body.access_token) {",
+                  "    pm.collectionVariables.set('access_token', body.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as tester to obtain regular_user_token",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "{{tester_username}}", "type": "text" },
+                { "key": "password", "value": "{{tester_password}}", "type": "text" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login as tester succeeds with 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body.access_token) {",
+                  "    pm.collectionVariables.set('regular_user_token', body.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /movies returns 200 with paginated envelope",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has paginated envelope with items, total, page, size, _links', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('items');",
+                  "    pm.expect(body.items).to.be.an('array');",
+                  "    pm.expect(body).to.have.property('total');",
+                  "    pm.expect(body).to.have.property('page');",
+                  "    pm.expect(body).to.have.property('size');",
+                  "    pm.expect(body).to.have.property('_links');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /movies?q=incep returns Inception (case-insensitive search)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies?q=incep",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"],
+              "query": [{ "key": "q", "value": "incep" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Results include Inception (case-insensitive LIKE match)', () => {",
+                  "    const body = pm.response.json();",
+                  "    const titles = body.items.map(m => m.title);",
+                  "    pm.expect(titles).to.include('Inception');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /movies?page=1&size=2 returns first page of size 2",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies?page=1&size=2",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "size", "value": "2" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns exactly 2 items on page 1', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.items.length).to.equal(2);",
+                  "    pm.expect(body.page).to.equal(1);",
+                  "    pm.expect(body.size).to.equal(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /movies?size=0 returns 422 validation_error",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies?size=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"],
+              "query": [{ "key": "size", "value": "0" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422 (size must be >= 1)', () => pm.response.to.have.status(422));",
+                  "pm.test('Body code is validation_error with errors array', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('validation_error');",
+                  "    pm.expect(body.errors).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /movies?size=-1 returns 422 validation_error",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies?size=-1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"],
+              "query": [{ "key": "size", "value": "-1" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422 (negative size rejected)', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /movies/1 returns 200 with _links.self",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies", "1"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has _links.self', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('_links');",
+                  "    pm.expect(body._links).to.have.property('self');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /movies/99999 returns 404 not_found with _links.list",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies/99999",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies", "99999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Body code is not_found and _links.list points to movies collection', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('not_found');",
+                  "    pm.expect(body._links.list.href).to.equal('/api/v1/movies');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /movies without auth returns 401",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Test\", \"release_year\": 2020, \"genre_ids\": []}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401 (no auth token provided)', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /movies as tester returns 403 forbidden",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{regular_user_token}}", "type": "string" }]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Test\", \"release_year\": 2020, \"genre_ids\": []}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Body code is forbidden and no _links present', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('forbidden');",
+                  "    pm.expect(body).to.not.have.property('_links');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /movies as admin with valid body returns 201 with Location header",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Postman Test Movie\", \"release_year\": 2024, \"genre_ids\": []}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Location header points at the new movie resource', () => {",
+                  "    const loc = pm.response.headers.get('Location');",
+                  "    pm.expect(loc).to.match(/\\/api\\/v1\\/movies\\/\\d+/);",
+                  "});",
+                  "",
+                  "// Save the new movie_id for update and delete tests",
+                  "const body = pm.response.json();",
+                  "if (body.id) {",
+                  "    pm.collectionVariables.set('movie_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /movies as admin with invalid body returns 422 with errors[]",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Old Movie\", \"release_year\": 1500, \"genre_ids\": []}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Body code is validation_error with non-empty errors array (Pydantic shape)', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('validation_error');",
+                  "    pm.expect(body.errors).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /movies as admin with genre_ids=[9999] returns 422 without errors[]",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Test Movie\", \"release_year\": 2020, \"genre_ids\": [9999]}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Body code is validation_error and errors is absent or null (service-layer shape)', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('validation_error');",
+                  "    // Service-layer 422: errors key is absent or null (not populated by Pydantic)",
+                  "    const errors = body.errors;",
+                  "    pm.expect(errors === undefined || errors === null).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /movies/{{movie_id}} as admin returns 200 with updated_at changed",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies/{{movie_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies", "{{movie_id}}"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Postman Test Movie (Updated)\", \"release_year\": 2025, \"genre_ids\": []}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has updated title and updated_at field', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.title).to.equal('Postman Test Movie (Updated)');",
+                  "    pm.expect(body.release_year).to.equal(2025);",
+                  "    pm.expect(body).to.have.property('updated_at');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /movies/{{movie_id}} as tester returns 403 forbidden",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies/{{movie_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies", "{{movie_id}}"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{regular_user_token}}", "type": "string" }]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Hacked Title\", \"release_year\": 2020, \"genre_ids\": []}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Body code is forbidden', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /movies/{{movie_id}} as admin returns 204",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies/{{movie_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies", "{{movie_id}}"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204 No Content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Genres",
+      "item": [
+        {
+          "name": "GET /genres returns 200 with 5 seeded items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/genres",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "genres"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has 5 seeded genres with envelope fields', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.total).to.equal(5);",
+                  "    pm.expect(body.items).to.be.an('array').with.lengthOf(5);",
+                  "    pm.expect(body).to.have.property('page');",
+                  "    pm.expect(body).to.have.property('size');",
+                  "    pm.expect(body).to.have.property('_links');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /genres?q=nope returns 200 with total=0 and empty items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/genres?q=nope",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "genres"],
+              "query": [{ "key": "q", "value": "nope" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has total=0 and empty items array', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.total).to.equal(0);",
+                  "    pm.expect(body.items).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /genres?size=0 returns 422 validation_error",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/genres?size=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "genres"],
+              "query": [{ "key": "size", "value": "0" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422 (size must be >= 1)', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /genres/1 returns 200 with _links.self",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/genres/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "genres", "1"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has id, name, and _links.self pointing at /api/v1/genres/1', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.equal(1);",
+                  "    pm.expect(body).to.have.property('name');",
+                  "    pm.expect(body._links.self.href).to.equal('/api/v1/genres/1');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /genres/9999 returns 404 not_found",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/genres/9999",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "genres", "9999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Body code is not_found with _links.list pointing to genres collection', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('not_found');",
+                  "    pm.expect(body._links.list.href).to.equal('/api/v1/genres');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "GET /reviews returns 200 with seeded reviews",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/reviews",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reviews"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has paginated envelope with seeded reviews', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('items');",
+                  "    pm.expect(body.items).to.be.an('array');",
+                  "    pm.expect(body.total).to.be.at.least(1);",
+                  "    pm.expect(body).to.have.property('_links');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /reviews?movie_id=1 returns reviews filtered by movie_id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/reviews?movie_id=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reviews"],
+              "query": [{ "key": "movie_id", "value": "1" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All returned reviews belong to movie_id=1', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.items).to.be.an('array');",
+                  "    body.items.forEach(r => {",
+                  "        pm.expect(r.movie_id).to.equal(1);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /reviews?movie_id=99999 returns 200 with total=0",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/reviews?movie_id=99999",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reviews"],
+              "query": [{ "key": "movie_id", "value": "99999" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has total=0 and empty items for non-existent movie_id', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.total).to.equal(0);",
+                  "    pm.expect(body.items).to.be.an('array').that.is.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /reviews/1 returns 200 with _links.self and _links.movie",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/reviews/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reviews", "1"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has _links.self and _links.movie', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body._links).to.have.property('self');",
+                  "    pm.expect(body._links).to.have.property('movie');",
+                  "    pm.expect(body._links.self.href).to.equal('/api/v1/reviews/1');",
+                  "    pm.expect(body._links.movie.href).to.match(/\\/api\\/v1\\/movies\\/\\d+/);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /reviews/9999 returns 404 not_found",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/reviews/9999",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reviews", "9999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Body code is not_found with _links.list pointing to reviews collection', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('not_found');",
+                  "    pm.expect(body._links.list.href).to.equal('/api/v1/reviews');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Security",
+      "item": [
+        {
+          "name": "POST /genres/1 returns 405 method_not_allowed",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/genres/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "genres", "1"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 405', () => pm.response.to.have.status(405));",
+                  "pm.test('Body code is method_not_allowed', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('method_not_allowed');",
+                  "    pm.expect(body).to.have.property('detail');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /notathing returns 404 not_found with _links.list",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/notathing",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notathing"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Body code is not_found with _links.list', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.equal('not_found');",
+                  "    pm.expect(body).to.have.property('detail');",
+                  "    pm.expect(body).to.have.property('_links');",
+                  "    pm.expect(body._links).to.have.property('list');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /movies response headers include nosniff and strict CSP",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Has X-Content-Type-Options: nosniff on API response', () => {",
+                  "    pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.equal('nosniff');",
+                  "});",
+                  "pm.test('Has strict Content-Security-Policy with default-src none on API response', () => {",
+                  "    const csp = pm.response.headers.get('Content-Security-Policy');",
+                  "    pm.expect(csp).to.be.a('string');",
+                  "    pm.expect(csp).to.include(\"default-src 'none'\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /docs response Content-Security-Policy includes cdn.jsdelivr.net",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/docs",
+              "host": ["{{base_url}}"],
+              "path": ["docs"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Security-Policy includes cdn.jsdelivr.net (relaxed CSP carve-out for Swagger UI)', () => {",
+                  "    const csp = pm.response.headers.get('Content-Security-Policy');",
+                  "    pm.expect(csp).to.be.a('string');",
+                  "    pm.expect(csp).to.include('cdn.jsdelivr.net');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decoded access_token contains iss and aud claims equal to rest-api",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/healthz",
+              "host": ["{{base_url}}"],
+              "path": ["healthz"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('access_token payload contains iss=rest-api and aud=rest-api', () => {",
+                  "    const token = pm.collectionVariables.get('access_token');",
+                  "    pm.expect(token).to.be.a('string').and.not.be.empty;",
+                  "",
+                  "    const parts = token.split('.');",
+                  "    pm.expect(parts.length).to.equal(3);",
+                  "",
+                  "    // Decode the payload segment (base64url → JSON)",
+                  "    const padded = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "    const jsonStr = atob(padded);",
+                  "    const payload = JSON.parse(jsonStr);",
+                  "",
+                  "    pm.expect(payload.iss).to.equal('rest-api');",
+                  "    pm.expect(payload.aud).to.equal('rest-api');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OPTIONS /api/v1/movies with Origin: http://localhost:3000 returns Access-Control-Allow-Origin header",
+          "request": {
+            "method": "OPTIONS",
+            "url": {
+              "raw": "{{base_url}}/api/v1/movies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "movies"]
+            },
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://localhost:3000"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Access-Control-Allow-Origin reflects the allow-listed origin', () => {",
+                  "    const acao = pm.response.headers.get('Access-Control-Allow-Origin');",
+                  "    pm.expect(acao).to.equal('http://localhost:3000');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
