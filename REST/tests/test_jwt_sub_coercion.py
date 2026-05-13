@@ -1,7 +1,5 @@
 """Tests for JWT sub claim coercion: encode as string, decode as int before DB lookup."""
 
-from __future__ import annotations
-
 import pytest
 
 from tests.conftest import TEST_JWT_SECRET

@@ -88,8 +88,12 @@ def test_missing_jwt_secret_prevents_init_db(monkeypatch, tmp_path):
          patch("app.utils.redis_client.init_redis", mock_init_redis), \
          patch("app.utils.redis_client.close_redis", mock_close_redis):
 
-        app = _fresh_app()
+        # Settings is now instantiated at module load, so the ValidationError
+        # is raised at import time (inside _fresh_app) rather than during
+        # TestClient startup. Both behaviours satisfy the intent of this test:
+        # misconfiguration is caught before init_db is called.
         with pytest.raises((ValidationError, Exception)):
+            app = _fresh_app()
             with TestClient(app):
                 pass
 

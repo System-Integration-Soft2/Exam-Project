@@ -1,23 +1,24 @@
-from __future__ import annotations
-
 import logging
 from contextlib import asynccontextmanager
 
 import redis.exceptions
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import Settings
 from app.utils.db import get_db_connection, init_db
 from app.utils.exceptions import register_exception_handlers
+from app.utils.middleware import SecurityHeadersMiddleware
 from app.utils.redis_client import close_redis, init_redis, ping_redis
 
 logger = logging.getLogger(__name__)
 
+settings = Settings()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    settings = Settings()
     app.state.settings = settings
     await init_db(settings)
     redis_client = await init_redis(settings.REDIS_URL)
@@ -35,7 +36,12 @@ register_exception_handlers(app)
 async def redis_connection_error_handler(
     request: Request, exc: redis.exceptions.ConnectionError
 ) -> JSONResponse:
-    """Return 503 when Redis is unreachable during a request."""
+    """Return 503 when Redis is unreachable during a request.
+
+    See also: exceptions.py register_exception_handlers — all other envelope
+    handlers live there; this one stays inline because it is a transport-layer
+    fault rather than an application-level error.
+    """
     logger.error("Redis connection error: %s", exc)
     return JSONResponse(
         status_code=503,
@@ -51,6 +57,17 @@ app.include_router(auth_router)
 app.include_router(movies_router)
 app.include_router(genres_router)
 app.include_router(reviews_router)
+
+# CORSMiddleware is registered first so SecurityHeadersMiddleware wraps it,
+# ensuring security headers appear on all responses including CORS preflight responses.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in settings.CORS_ALLOWED_ORIGINS.split(",")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.get("/healthz")

@@ -1,17 +1,20 @@
-from __future__ import annotations
+import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException
 
 from app.utils.links import list_link, login_link
 from app.models.common import LinksMap
+
+logger = logging.getLogger(__name__)
 
 
 class AppError(Exception):
     """Application-level error that maps to a structured HTTP response.
 
-    Raise this instead of HTTPException so all error responses share the
+    Instead of HTTPException so all error responses share the
     same {detail, code, _links?, errors?} envelope.
     """
 
@@ -64,7 +67,47 @@ async def validation_error_handler(
     )
 
 
+# Maps known HTTPException status codes to envelope code strings.
+# Unknown status codes fall back to "http_error".
+_HTTP_EXCEPTION_CODES: dict[int, str] = {
+    404: "not_found",
+    405: "method_not_allowed",
+    415: "unsupported_media_type",
+}
+
+
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Convert FastAPI/Starlette HTTPException into the structured envelope.
+
+    404 responses include a best-effort _links.list entry so clients can
+    navigate back to a known collection endpoint.
+    """
+    code = _HTTP_EXCEPTION_CODES.get(exc.status_code, "http_error")
+    body: dict = {"detail": exc.detail, "code": code}
+
+    if exc.status_code == 404:
+        links = list_link(request.url.path)
+        body["_links"] = {k: v.model_dump() for k, v in links.items()}
+
+    return JSONResponse(status_code=exc.status_code, content=body)
+
+
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all handler for exceptions not covered by more specific handlers.
+
+    Logs the full traceback at ERROR so the failure is visible in logs, then
+    returns a sanitised 500 response that does not expose internal details.
+    """
+    logger.exception("Unhandled exception during request: %s", exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "code": "internal_error"},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
-    """Register AppError and RequestValidationError handlers on the FastAPI app."""
+    """Register all structured envelope handlers on the FastAPI app."""
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(Exception, unhandled_exception_handler)

@@ -19,6 +19,9 @@ class Settings(BaseSettings):
 
     CORS_ALLOWED_ORIGINS: str = "http://localhost:3000"
 
+    JWT_ISSUER: str = "rest-api"
+    JWT_AUDIENCE: str = "rest-api"
+
     # Seed admin credentials
     SEED_ADMIN_USERNAME: str = Field(default="admin", pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     SEED_ADMIN_EMAIL: EmailStr = "admin@example.com"

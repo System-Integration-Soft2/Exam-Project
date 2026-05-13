@@ -1,4 +1,3 @@
-from __future__ import annotations
 import time
 import uuid
 import bcrypt
@@ -55,6 +54,8 @@ def _make_token(
         "iat": now,
         "exp": now + ttl_seconds,
         "type": token_type,
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
@@ -84,6 +85,8 @@ def decode_token(token: str, settings) -> dict:
             token,
             settings.JWT_SECRET,
             algorithms=[settings.JWT_ALGORITHM],
+            audience=settings.JWT_AUDIENCE,
+            issuer=settings.JWT_ISSUER,
         )
     except jwt.PyJWTError as exc:
         raise AppError("unauthorized", "Invalid or expired token", 401) from exc

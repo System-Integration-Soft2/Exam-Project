@@ -4,8 +4,6 @@ Verifies that init_db() seeds the fixture tester user automatically,
 without any external script invocation.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import aiosqlite

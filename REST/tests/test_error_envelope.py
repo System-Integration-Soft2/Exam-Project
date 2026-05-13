@@ -1,7 +1,5 @@
 """Tests for the structured error envelope: AppError handler, 404 _links, 401 _links, validation errors."""
 
-from __future__ import annotations
-
 import sys
 from unittest.mock import AsyncMock, patch
 

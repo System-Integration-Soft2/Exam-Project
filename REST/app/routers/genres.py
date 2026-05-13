@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from fastapi import APIRouter, Depends, Query
 
 from app.services.genre_service import get_genre, list_genres

@@ -1,7 +1,5 @@
 """Integration tests for POST /api/v1/auth/refresh: rotation, denylist, reuse prevention."""
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -119,6 +117,7 @@ async def test_refresh_old_jti_is_denylisted(monkeypatch, tmp_path):
             old_refresh,
             TEST_JWT_SECRET,
             algorithms=["HS256"],
+            audience="rest-api",
         )
         old_jti = old_payload["jti"]
 

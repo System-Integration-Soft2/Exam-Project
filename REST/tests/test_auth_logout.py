@@ -1,7 +1,5 @@
 """Integration tests for POST /api/v1/auth/logout: denylist both jtis, reuse prevention."""
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -107,10 +105,12 @@ async def test_logout_both_jtis_denylisted(monkeypatch, tmp_path):
     with client:
         tokens = _login(client)
         access_payload = pyjwt.decode(
-            tokens["access_token"], TEST_JWT_SECRET, algorithms=["HS256"]
+            tokens["access_token"], TEST_JWT_SECRET, algorithms=["HS256"],
+            audience="rest-api",
         )
         refresh_payload = pyjwt.decode(
-            tokens["refresh_token"], TEST_JWT_SECRET, algorithms=["HS256"]
+            tokens["refresh_token"], TEST_JWT_SECRET, algorithms=["HS256"],
+            audience="rest-api",
         )
 
         client.post(

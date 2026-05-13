@@ -1,7 +1,5 @@
 """Tests for UserInternal model: Pydantic model, attribute access, role field."""
 
-from __future__ import annotations
-
 import pytest
 
 

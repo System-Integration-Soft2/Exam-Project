@@ -1,7 +1,5 @@
 """Tests for Redis-down failure mode: get_current_user must return 503, never 200."""
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch

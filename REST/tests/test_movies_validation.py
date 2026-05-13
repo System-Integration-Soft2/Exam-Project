@@ -1,7 +1,5 @@
 """Integration tests for movie request body validation (Pydantic and service-layer)."""
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch

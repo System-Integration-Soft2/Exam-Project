@@ -1,7 +1,5 @@
 """Unit tests for security utilities: JWT encode/decode, password hashing, token validation."""
 
-from __future__ import annotations
-
 import time
 import uuid
 
@@ -94,12 +92,12 @@ def test_decode_token_tampered_signature_raises(monkeypatch):
 
 
 def test_decode_token_expired_raises(monkeypatch):
-    """An expired token must be rejected."""
+    """An expired token must be rejected (expiry path, not missing-claim path)."""
     from app.utils.security import decode_token
     from app.utils.exceptions import AppError
 
     settings = make_settings(monkeypatch)
-    # Create a token that expired 1 second ago
+    # Include iss/aud so the token fails on expiry, not on missing claims.
     payload = {
         "sub": "1",
         "username": "alice",
@@ -108,6 +106,8 @@ def test_decode_token_expired_raises(monkeypatch):
         "iat": int(time.time()) - 10,
         "exp": int(time.time()) - 1,
         "type": "access",
+        "iss": "rest-api",
+        "aud": "rest-api",
     }
     expired_token = jwt.encode(payload, TEST_JWT_SECRET, algorithm="HS256")
 
@@ -148,3 +148,67 @@ def test_sub_is_string_in_access_token(monkeypatch):
     assert isinstance(payload["sub"], str)
     # converting to int must yield the original user_id
     assert int(payload["sub"]) == 42
+
+
+def test_iss_aud_round_trip(monkeypatch):
+    """Tokens issued by create_access_token carry iss and aud claims."""
+    from app.utils.security import create_access_token, decode_token
+
+    settings = make_settings(monkeypatch)
+    token = create_access_token(1, "alice", "user", settings)
+    payload = decode_token(token, settings)
+
+    assert payload["iss"] == "rest-api"
+    assert payload["aud"] == "rest-api"
+
+
+def test_wrong_audience_rejected(monkeypatch):
+    """A token with a mismatched aud claim must be rejected with 401."""
+    from app.utils.security import decode_token
+    from app.utils.exceptions import AppError
+
+    settings = make_settings(monkeypatch)
+    # Craft a token with a different audience
+    payload = {
+        "sub": "1",
+        "username": "alice",
+        "role": "user",
+        "jti": str(uuid.uuid4()),
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 900,
+        "type": "access",
+        "iss": "rest-api",
+        "aud": "other-service",
+    }
+    token = jwt.encode(payload, TEST_JWT_SECRET, algorithm="HS256")
+
+    with pytest.raises(AppError) as exc_info:
+        decode_token(token, settings)
+    assert exc_info.value.status == 401
+    assert exc_info.value.code == "unauthorized"
+
+
+def test_wrong_issuer_rejected(monkeypatch):
+    """A token with a mismatched iss claim must be rejected with 401."""
+    from app.utils.security import decode_token
+    from app.utils.exceptions import AppError
+
+    settings = make_settings(monkeypatch)
+    # Craft a token with a different issuer
+    payload = {
+        "sub": "1",
+        "username": "alice",
+        "role": "user",
+        "jti": str(uuid.uuid4()),
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 900,
+        "type": "access",
+        "iss": "other-issuer",
+        "aud": "rest-api",
+    }
+    token = jwt.encode(payload, TEST_JWT_SECRET, algorithm="HS256")
+
+    with pytest.raises(AppError) as exc_info:
+        decode_token(token, settings)
+    assert exc_info.value.status == 401
+    assert exc_info.value.code == "unauthorized"

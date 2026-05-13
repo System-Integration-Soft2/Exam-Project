@@ -4,8 +4,6 @@ Verifies that each model is importable from its dedicated submodule AND
 from the top-level app.models package re-export.
 """
 
-from __future__ import annotations
-
 import pytest
 
 

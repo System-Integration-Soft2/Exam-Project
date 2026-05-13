@@ -1,7 +1,5 @@
 """Integration tests for GET /api/v1/reviews (list, movie_id filter, pagination, get by id)."""
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch

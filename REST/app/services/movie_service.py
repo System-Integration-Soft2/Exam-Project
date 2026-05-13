@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from app.utils.db import escape_like
 from app.utils.exceptions import AppError
 

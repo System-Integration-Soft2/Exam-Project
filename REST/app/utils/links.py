@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 import re
+from urllib.parse import quote, urlencode
 
 from app.models.common import Link, LinksMap
 
@@ -26,10 +25,8 @@ def page_links(base_path: str, page: int, size: int, total: int, **filters) -> L
     active = {k: v for k, v in filters.items() if v not in (None, "")}
 
     def _href(p: int) -> str:
-        href = f"{base_path}?page={p}&size={size}"
-        for key, value in active.items():
-            href += f"&{key}={value}"
-        return href
+        query = {"page": p, "size": size, **active}
+        return f"{base_path}?{urlencode(query, quote_via=quote)}"
 
     links: LinksMap = {"self": Link(href=_href(page), method="GET")}
 
