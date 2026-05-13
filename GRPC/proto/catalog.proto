@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package catalog;
+
+// ── Messages ──────────────────────────────────────────────
+
+message MovieRequest {
+  int64 movie_id = 1;
+}
+
+message MovieResponse {
+  int64           id              = 1;
+  string          title           = 2;
+  int32           release_year    = 3;
+  int32           runtime_minutes = 4;
+  string          director        = 5;
+  string          synopsis        = 6;
+  repeated string genres          = 7;
+}
+
+message ReviewSubscribeRequest {
+  int64 movie_id = 1;
+}
+
+message ReviewUpdate {
+  int64  review_id   = 1;
+  int64  movie_id    = 2;
+  string movie_title = 3;
+  int32  rating      = 4;
+  string comment     = 5;
+  string created_at  = 6;
+}
+
+// ── Service ───────────────────────────────────────────────
+
+service CatalogService {
+
+  // Unary: fetch a single movie with its genres
+  rpc GetMovie (MovieRequest) returns (MovieResponse);
+
+  // Bidirectional streaming: client streams movie IDs to subscribe to,
+  // server streams new review notifications back as they appear
+  rpc LiveReviewFeed (stream ReviewSubscribeRequest) returns (stream ReviewUpdate);
+}
