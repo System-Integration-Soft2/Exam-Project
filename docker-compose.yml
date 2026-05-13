@@ -9,7 +9,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./data:/data
+      - ./catalog.db:/data/catalog.db
     env_file:
       - .env
     healthcheck:
