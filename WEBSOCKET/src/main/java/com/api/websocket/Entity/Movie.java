@@ -8,13 +8,14 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "orders")
-public class Order {
+@Table(name = "movies")
+public class Movie {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-
+    private String title;
+    private int releaseYear;
+    private String director;
     private String status;
-    private String message;
 
 }

@@ -1,8 +1,8 @@
 package com.api.websocket.Handler;
 
-import com.api.websocket.Entity.Order;
-import com.api.websocket.Repository.OrderRepository;
-import com.api.websocket.dto.OrderUpdate;
+import com.api.websocket.Entity.Movie;
+import com.api.websocket.Repository.MovieRepository;
+import com.api.websocket.dto.MovieUpdate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
@@ -18,40 +18,44 @@ public class UnaryHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    private OrderRepository orderRepository;
+    private MovieRepository movieRepository;
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         System.out.println("Received message: " + payload);
-        int orderId;
+        int movieId;
 
         // Ikke indtastet et gyldigt heltal
-        try{
-            orderId = Integer.parseInt(payload.trim());
+        try {
+            movieId = Integer.parseInt(payload.trim());
         } catch (NumberFormatException e) {
-            session.sendMessage(new TextMessage("Fejl i ordre ID format. Vær sikker på at du sender et gyldigt heltal."));
+            session.sendMessage(new TextMessage("Fejl i Film ID format. Vær sikker på at du sender et gyldigt heltal."));
             session.close();
             return;
         }
 
-        Optional<Order> order = orderRepository.findById(orderId);
+        Optional<Movie> movie = movieRepository.findById(movieId);
 
-        // Order ikke fundet
-        if (order.isEmpty()) {
-            session.sendMessage(new TextMessage("Ordre med id" + orderId + " blev ikke fundet"));
+        // Film ikke fundet
+        if (movie.isEmpty()) {
+            session.sendMessage(new TextMessage("Filmen med id" + movieId + " blev ikke fundet"));
             session.close();
             return;
         }
 
-        if (order.isPresent()) {
-            OrderUpdate response = new OrderUpdate(orderId, order.get().getStatus(), order.get().getMessage());
-            String jsonResponse = objectMapper.writeValueAsString(response);
-            session.sendMessage(new TextMessage(jsonResponse));
-        } else {
-            session.sendMessage(new TextMessage("Ordre ikke fundet"));
-        }
+        MovieUpdate response = new MovieUpdate(
+                movie.get().getId(),
+                movie.get().getTitle(),
+                movie.get().getReleaseYear(),
+                movie.get().getDirector(),
+                movie.get().getStatus()
+        );
+
+        String json = objectMapper.writeValueAsString(response);
+        session.sendMessage(new TextMessage(json));
 
         session.close();
+
     }
 }

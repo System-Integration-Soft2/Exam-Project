@@ -8,8 +8,10 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public class OrderUpdate {
-    private int orderId;
+public class MovieUpdate {
+    private int id;
+    private String title;
+    private int releaseYear;
+    private String director;
     private String status;
-    private String message;
 }

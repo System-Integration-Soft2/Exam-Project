@@ -21,10 +21,10 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 
-        registry.addHandler(unaryHandler, "/ws/order/status" )
+        registry.addHandler(unaryHandler, "/ws/movie/detail" )
                         .setAllowedOrigins("localhost:3000");
 
-        registry.addHandler(streamingHandler, "/ws/order/track" )
+        registry.addHandler(streamingHandler, "/ws/movie/stream" )
                 .setAllowedOrigins("localhost:3000");
 
     }
