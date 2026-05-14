@@ -2,12 +2,11 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
 
 WORKDIR /build
 
-# Copy solution and project files first for layer caching
-COPY SOAP/SoapService.sln ./SOAP/SoapService.sln
+# Copy project file first for layer caching
 COPY SOAP/src/SoapService.csproj ./SOAP/src/SoapService.csproj
 
-# Restore dependencies
-RUN dotnet restore SOAP/SoapService.sln
+# Restore runtime project only — tests are not needed in the production image
+RUN dotnet restore SOAP/src/SoapService.csproj
 
 # Copy source
 COPY SOAP/src/ ./SOAP/src/

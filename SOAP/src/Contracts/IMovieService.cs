@@ -1,5 +1,6 @@
 using CoreWCF;
 using SoapService.Contracts.Dtos;
+using SoapService.Faults;
 
 namespace SoapService.Contracts;
 
@@ -10,6 +11,7 @@ public interface IMovieService
     MovieListResult ListMovies();
 
     [OperationContract]
+    [FaultContract(typeof(NotFoundFault))]
     MovieDto GetMovieById(GetMovieByIdRequest request);
 
     [OperationContract]
