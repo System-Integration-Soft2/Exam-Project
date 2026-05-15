@@ -1,0 +1,57 @@
+input AddMovieInput {
+  title: String!
+  releaseYear: Int!
+  runtimeMinutes: Int = null
+  director: String = null
+  synopsis: String = null
+  genreIds: [ID!] = null
+}
+
+input AddReviewInput {
+  movieId: ID!
+  userId: ID!
+  rating: Int!
+  comment: String = null
+}
+
+type Genre {
+  id: ID!
+  name: String!
+  movies: [Movie!]!
+}
+
+type Movie {
+  id: ID!
+  title: String!
+  releaseYear: Int!
+  runtimeMinutes: Int
+  director: String
+  synopsis: String
+  genres: [Genre!]!
+  reviews: [Review!]!
+  averageRating: Float
+}
+
+type Mutation {
+  addReview(input: AddReviewInput!): Review!
+  addMovie(input: AddMovieInput!): Movie!
+}
+
+type Query {
+  movie(id: ID!): Movie
+  movies(genre: String = null, year: Int = null, search: String = null, limit: Int! = 20, offset: Int! = 0): [Movie!]!
+}
+
+type Review {
+  id: ID!
+  rating: Int!
+  comment: String
+  createdAt: String!
+  movie: Movie!
+  user: ReviewAuthor!
+}
+
+type ReviewAuthor {
+  id: ID!
+  username: String!
+}
