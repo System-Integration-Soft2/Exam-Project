@@ -35,50 +35,50 @@ public class MovieRepository : IMovieRepository
         _sharedConnection = sharedConnection;
     }
 
-    private async Task<SqliteConnection> OpenConnectionAsync(CancellationToken ct)
+    private SqliteConnection OpenConnection()
     {
         if (_sharedConnection is not null)
             return _sharedConnection; // already open; caller must NOT dispose it
 
         var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(ct);
+        connection.Open();
 
-        // Defensive defaults matching REST's pattern (CODE-07).
-        await using var pragmaFk = connection.CreateCommand();
+        // Defensive defaults
+        using var pragmaFk = connection.CreateCommand();
         pragmaFk.CommandText = "PRAGMA foreign_keys=ON";
-        await pragmaFk.ExecuteNonQueryAsync(ct);
+        pragmaFk.ExecuteNonQuery();
 
-        await using var pragmaBusy = connection.CreateCommand();
+        using var pragmaBusy = connection.CreateCommand();
         pragmaBusy.CommandText = "PRAGMA busy_timeout=5000";
-        await pragmaBusy.ExecuteNonQueryAsync(ct);
+        pragmaBusy.ExecuteNonQuery();
 
         return connection;
     }
 
-    public async Task<IReadOnlyList<MovieDto>> ListMoviesAsync(CancellationToken ct = default)
+    public IReadOnlyList<MovieDto> ListMovies()
     {
-        var connection = await OpenConnectionAsync(ct);
+        var connection = OpenConnection();
         // Only dispose the connection if we opened it (not the shared test connection).
         var ownsConnection = _sharedConnection is null;
         try
         {
             var movies = new List<MovieDto>();
 
-            await using var cmd = connection.CreateCommand();
+            using var cmd = connection.CreateCommand();
             cmd.CommandText =
                 "SELECT id, title, director, release_year, runtime_minutes, synopsis, created_at, updated_at " +
                 "FROM movies ORDER BY id";
 
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
             {
                 movies.Add(MapMovieRow(reader));
             }
 
-            // N+1 genre fetch — mirrors REST's pattern (CODE-01); acceptable at 10-row scale (CONT-10).
+            // N+1 genre fetch - maybe i'll optimise later with a JOIN??
             foreach (var movie in movies)
             {
-                movie.Genres = await FetchGenresAsync(connection, movie.Id, ct);
+                movie.Genres = FetchGenres(connection, movie.Id);
             }
 
             return movies;
@@ -86,52 +86,53 @@ public class MovieRepository : IMovieRepository
         finally
         {
             if (ownsConnection)
-                await connection.DisposeAsync();
+                connection.Dispose();
         }
     }
 
-    public async Task<MovieDto?> GetMovieByIdAsync(long id, CancellationToken ct = default)
+    public MovieDto? GetMovieById(long id)
     {
-        var connection = await OpenConnectionAsync(ct);
+        var connection = OpenConnection();
         var ownsConnection = _sharedConnection is null;
         try
         {
-            await using var cmd = connection.CreateCommand();
+            using var cmd = connection.CreateCommand();
             cmd.CommandText =
                 "SELECT id, title, director, release_year, runtime_minutes, synopsis, created_at, updated_at " +
                 "FROM movies WHERE id = @id";
             cmd.Parameters.AddWithValue("@id", id);
 
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            if (!await reader.ReadAsync(ct))
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read())
                 return null;
 
             var movie = MapMovieRow(reader);
             // Close reader before running genre query on the same connection.
-            await reader.CloseAsync();
+            reader.Close();
 
-            movie.Genres = await FetchGenresAsync(connection, movie.Id, ct);
+            movie.Genres = FetchGenres(connection, movie.Id);
             return movie;
         }
         finally
         {
             if (ownsConnection)
-                await connection.DisposeAsync();
+                connection.Dispose();
         }
     }
 
     private static MovieDto MapMovieRow(SqliteDataReader reader)
     {
+        var directorOrdinal = reader.GetOrdinal("director");
         var runtimeOrdinal = reader.GetOrdinal("runtime_minutes");
         var synopsisOrdinal = reader.GetOrdinal("synopsis");
-        var directorOrdinal = reader.GetOrdinal("director");
 
         return new MovieDto
         {
             Id = reader.GetInt64(reader.GetOrdinal("id")),
             Title = reader.GetString(reader.GetOrdinal("title")),
+            // Director is nullable in the schema — return null when absent
             Director = reader.IsDBNull(directorOrdinal)
-                ? string.Empty
+                ? null
                 : reader.GetString(directorOrdinal),
             ReleaseYear = reader.GetInt32(reader.GetOrdinal("release_year")),
             RuntimeMinutes = reader.IsDBNull(runtimeOrdinal)
@@ -140,16 +141,15 @@ public class MovieRepository : IMovieRepository
             Synopsis = reader.IsDBNull(synopsisOrdinal)
                 ? null
                 : reader.GetString(synopsisOrdinal),
-            // Timestamps read as raw strings — no DateTime rebinding (CONT-09).
+            // Timestamps read as raw strings — no DateTime rebinding
             CreatedAt = reader.GetString(reader.GetOrdinal("created_at")),
             UpdatedAt = reader.GetString(reader.GetOrdinal("updated_at")),
         };
     }
 
-    private static async Task<List<GenreDto>> FetchGenresAsync(
-        SqliteConnection connection, long movieId, CancellationToken ct)
+    private static List<GenreDto> FetchGenres(SqliteConnection connection, long movieId)
     {
-        await using var cmd = connection.CreateCommand();
+        using var cmd = connection.CreateCommand();
         cmd.CommandText =
             "SELECT g.id, g.name " +
             "FROM genres g " +
@@ -159,8 +159,8 @@ public class MovieRepository : IMovieRepository
         cmd.Parameters.AddWithValue("@movieId", movieId);
 
         var genres = new List<GenreDto>();
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
         {
             genres.Add(new GenreDto
             {

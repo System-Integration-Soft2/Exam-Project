@@ -34,9 +34,7 @@ app.UseServiceModel(serviceBuilder =>
 var serviceMetadataBehavior = app.Services.GetRequiredService<ServiceMetadataBehavior>();
 serviceMetadataBehavior.HttpGetEnabled = true;
 
-// Fail loud at startup if DATABASE_PATH is missing — mirrors REST's JWT_SECRET guard (vision §7).
-// HealthEndpoint and MovieRepository depend on this being set; a silent default would mask
-// misconfiguration until the first request.
+// Fail loud at startup if DATABASE_PATH is missing
 if (string.IsNullOrWhiteSpace(app.Configuration["DATABASE_PATH"]))
     throw new InvalidOperationException("DATABASE_PATH environment variable is required");
 

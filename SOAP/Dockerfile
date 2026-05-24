@@ -2,17 +2,17 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
 
 WORKDIR /build
 
-# Copy project file first for layer caching
+# Copy project file first for layer caching of the restore step
 COPY SOAP/src/SoapService.csproj ./SOAP/src/SoapService.csproj
 
 # Restore runtime project only — tests are not needed in the production image
 RUN dotnet restore SOAP/src/SoapService.csproj
 
-# Copy source
+# Copy source (invalidates cache only when source changes, not on csproj-only changes)
 COPY SOAP/src/ ./SOAP/src/
 
-# Publish release build
-RUN dotnet publish SOAP/src/SoapService.csproj -c Release -o /app/publish --no-restore
+# Publish release build (restore is a no-op here; packages are already in the NuGet cache layer)
+RUN dotnet publish SOAP/src/SoapService.csproj -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 

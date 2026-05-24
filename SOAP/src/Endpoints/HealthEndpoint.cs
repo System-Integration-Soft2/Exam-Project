@@ -31,7 +31,6 @@ public static class HealthEndpoint
     {
         app.MapGet("/healthz", async (IConfiguration config) =>
         {
-            // DATABASE_PATH is validated at startup (Program.cs); the ! is honest about that precondition.
             var dbPath = config["DATABASE_PATH"]!;
             var connectionString = $"Data Source={dbPath}";
 

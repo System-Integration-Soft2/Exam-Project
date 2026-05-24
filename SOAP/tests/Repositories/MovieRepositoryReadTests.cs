@@ -20,17 +20,17 @@ public class MovieRepositoryReadTests : IClassFixture<InMemoryDbFixture>
     }
 
     [Fact]
-    public async Task ListMoviesAsync_ReturnsAllSeededMovies()
+    public void ListMovies_ReturnsAllSeededMovies()
     {
-        var movies = await _repo.ListMoviesAsync();
+        var movies = _repo.ListMovies();
 
         movies.Should().HaveCount(10, "seed.sql inserts exactly 10 movies");
     }
 
     [Fact]
-    public async Task ListMoviesAsync_EachMovieHasItsGenres()
+    public void ListMovies_EachMovieHasItsGenres()
     {
-        var movies = await _repo.ListMoviesAsync();
+        var movies = _repo.ListMovies();
 
         // Inception (id=1) has Action + Sci-Fi per seed.sql
         var inception = movies.Single(m => m.Id == 1);
@@ -39,17 +39,17 @@ public class MovieRepositoryReadTests : IClassFixture<InMemoryDbFixture>
     }
 
     [Fact]
-    public async Task GetMovieByIdAsync_ReturnsNullForMissingId()
+    public void GetMovieById_ReturnsNullForMissingId()
     {
-        var result = await _repo.GetMovieByIdAsync(999);
+        var result = _repo.GetMovieById(999);
 
         result.Should().BeNull("id 999 does not exist in the seeded data");
     }
 
     [Fact]
-    public async Task GetMovieByIdAsync_ReturnsMovieWhenIdExists()
+    public void GetMovieById_ReturnsMovieWhenIdExists()
     {
-        var result = await _repo.GetMovieByIdAsync(1);
+        var result = _repo.GetMovieById(1);
 
         result.Should().NotBeNull();
         result!.Id.Should().Be(1);
@@ -57,9 +57,9 @@ public class MovieRepositoryReadTests : IClassFixture<InMemoryDbFixture>
     }
 
     [Fact]
-    public async Task GetMovieByIdAsync_ReturnsTimestampsAsRawStrings()
+    public void GetMovieById_ReturnsTimestampsAsRawStrings()
     {
-        var result = await _repo.GetMovieByIdAsync(1);
+        var result = _repo.GetMovieById(1);
 
         result.Should().NotBeNull();
         // Timestamps must be raw strings in YYYY-MM-DDTHH:MM:SS format (CONT-09).

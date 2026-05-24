@@ -17,13 +17,13 @@ public class MovieService : IMovieService
 
     public MovieListResult ListMovies()
     {
-        var list = _repo.ListMoviesAsync().GetAwaiter().GetResult();
+        var list = _repo.ListMovies();
         return new MovieListResult { Items = list.ToList() };
     }
 
     public MovieDto GetMovieById(GetMovieByIdRequest request)
     {
-        var movie = _repo.GetMovieByIdAsync(request.Id).GetAwaiter().GetResult();
+        var movie = _repo.GetMovieById(request.Id);
         if (movie is null)
         {
             throw new FaultException<NotFoundFault>(
