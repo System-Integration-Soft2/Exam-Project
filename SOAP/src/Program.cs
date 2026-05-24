@@ -3,6 +3,7 @@ using CoreWCF.Configuration;
 using CoreWCF.Description;
 using SoapService.Contracts;
 using SoapService.Endpoints;
+using SoapService.Middleware;
 using SoapService.Repositories;
 using SoapService.Services;
 
@@ -18,6 +19,8 @@ builder.Services.AddScoped<IMovieRepository, MovieRepository>();
 builder.Services.AddTransient<MovieService>();
 
 var app = builder.Build();
+
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 app.UseServiceModel(serviceBuilder =>
 {

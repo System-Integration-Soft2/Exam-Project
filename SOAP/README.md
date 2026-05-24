@@ -1,8 +1,8 @@
 # SOAP Movies Service
 
-A C# .NET 8 + CoreWCF SOAP service exposing `ListMovies`, `GetMovieById`,
-`CreateMovie`, and `UpdateMovie` against the shared `catalog.db` SQLite file.
-Runs on port 8001 alongside the REST service.
+A C# .NET + CoreWCF SOAP service exposing `ListMovies`, `GetMovieById`,
+`CreateMovie`, and `UpdateMovie` against the shared `catalog.db` SQLite db file.
+Runs on port 8001
 
 ## Service surface
 
@@ -10,15 +10,25 @@ Runs on port 8001 alongside the REST service.
 - **SOAP endpoint:** `POST http://localhost:8001/movies.svc` (SOAP 1.1, `basicHttpBinding`)
 - **Health check:** `GET http://localhost:8001/healthz` → `{"db":"ok"}` (200) or `{"db":"error"}` (503)
 
+Every response carries `X-Content-Type-Options: nosniff`.
+
 ## Running the API
 
 ```bash
 docker compose up -d soap-api
 ```
 
+
+To run without Docker:
+
+```bash
+cd SOAP
+DATABASE_PATH=../catalog.db dotnet run --project src -c Release
+```
+
 ## Architecture
 
-Three-layer mirror of the REST service:
+Three-layererd
 
 ```
 CoreWCF transport (Program.cs)
@@ -29,7 +39,6 @@ CoreWCF transport (Program.cs)
 
 ## Environment variables
 
-| Variable        | Default              | Purpose                        |
-|-----------------|----------------------|--------------------------------|
-| `DATABASE_PATH` | *(required)*         | SQLite file path (bind-mounted); service exits non-zero at boot if unset |
-| `LOG_LEVEL`     | `Information`        | Minimum log level (e.g. `Debug`, `Warning`, `Error`) |
+| Variable        | Default      | Purpose                                                                 |
+|-----------------|--------------|-------------------------------------------------------------------------|
+| `DATABASE_PATH` | *(required)* | SQLite file path (bind-mounted); service exits non-zero at boot if unset |

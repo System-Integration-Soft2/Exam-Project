@@ -40,7 +40,9 @@ public class MovieService : IMovieService
 
     public MovieDto CreateMovie(CreateMovieRequest request)
     {
-        // Field-level validation
+        // CoreWCF deserializes a missing <GenreIds> element to null, so we normalize it to empty list instead
+        request.GenreIds ??= new List<int>();
+
         MovieValidator.Validate(request);
 
         var newId = _repo.CreateMovie(request);
@@ -50,7 +52,9 @@ public class MovieService : IMovieService
 
     public MovieDto UpdateMovie(UpdateMovieRequest request)
     {
-        // Field-level validation
+        // CoreWCF deserializes a missing <GenreIds> element to null, so we normalize it to empty list instead
+        request.GenreIds ??= new List<int>();
+
         MovieValidator.Validate(request);
 
         _repo.UpdateMovie(request);
