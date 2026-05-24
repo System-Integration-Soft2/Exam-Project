@@ -12,7 +12,7 @@ public class UpdateMovieRequest
     public string Title { get; set; } = string.Empty;
 
     [DataMember(Order = 3)]
-    public string Director { get; set; } = string.Empty;
+    public string? Director { get; set; }
 
     [DataMember(Order = 4)]
     public int ReleaseYear { get; set; }

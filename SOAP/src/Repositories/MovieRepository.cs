@@ -1,35 +1,30 @@
+using CoreWCF;
 using Microsoft.Data.Sqlite;
 using SoapService.Contracts.Dtos;
+using SoapService.Faults;
 
 namespace SoapService.Repositories;
 
-/// <summary>
-/// SQLite-backed read repository for movies.
-///
-/// Two constructors:
-///   - IConfiguration-based: used by DI in the runtime host; opens a fresh connection
-///     per method call from DATABASE_PATH (scoped lifetime in DI).
-///   - SqliteConnection-based: used by tests; accepts a pre-opened shared connection
-///     (the :memory: fixture connection that must stay open for the test lifetime).
-///
-/// All queries use parameterised SqliteCommand.Parameters — no string concatenation
-/// or interpolation into SQL (RISK-02).
-///
-/// Timestamps are read as raw strings via reader.GetString(...) — no DateTime
-/// rebinding that would inject a UTC suffix (CONT-09).
-/// </summary>
+
+// SQLite-backed repository for movies (reads + writes).
+
+// Two constructors:
+// - IConfiguration-based: used by DI in the runtime host; opens a fresh connection
+// per method call from DATABASE_PATH (scoped lifetime in DI).
+// - SqliteConnection-based: used by tests; accepts a pre-opened shared connection
+// (the :memory: fixture connection that must stay open for the test lifetime).
+
+// All queries use parameterised SqliteCommand.Parameters — no string concatenation
 public class MovieRepository : IMovieRepository
 {
     private readonly string? _connectionString;
     private readonly SqliteConnection? _sharedConnection;
 
-    // DI constructor: used by the runtime host.
     public MovieRepository(IConfiguration configuration)
     {
         _connectionString = $"Data Source={configuration["DATABASE_PATH"]}";
     }
 
-    // Test constructor: accepts a pre-opened :memory: connection.
     public MovieRepository(SqliteConnection sharedConnection)
     {
         _sharedConnection = sharedConnection;
@@ -38,7 +33,7 @@ public class MovieRepository : IMovieRepository
     private SqliteConnection OpenConnection()
     {
         if (_sharedConnection is not null)
-            return _sharedConnection; // already open; caller must NOT dispose it
+            return _sharedConnection;
 
         var connection = new SqliteConnection(_connectionString);
         connection.Open();
@@ -169,5 +164,166 @@ public class MovieRepository : IMovieRepository
             });
         }
         return genres;
+    }
+
+    public long CreateMovie(CreateMovieRequest request)
+    {
+        var connection = OpenConnection();
+        var ownsConnection = _sharedConnection is null;
+        try
+        {
+            // Validate genre existence before opening the transaction
+            if (request.GenreIds.Count > 0)
+                ValidateGenreIdsExist(connection, request.GenreIds);
+
+            // Single explicit transaction wrapping INSERT + genre links so a mid-loop genre-insert failure cannot leave an orphaned movie row.
+            using var transaction = connection.BeginTransaction();
+
+            using var insertCmd = connection.CreateCommand();
+            insertCmd.Transaction = transaction;
+            insertCmd.CommandText =
+                "INSERT INTO movies (title, director, release_year, runtime_minutes, synopsis, " +
+                "created_at, updated_at) " +
+                "VALUES (@title, @director, @releaseYear, @runtimeMinutes, @synopsis, " +
+                "strftime('%Y-%m-%dT%H:%M:%S','now'), strftime('%Y-%m-%dT%H:%M:%S','now'))";
+            insertCmd.Parameters.AddWithValue("@title", request.Title);
+            insertCmd.Parameters.AddWithValue("@director", (object?)request.Director ?? System.DBNull.Value);
+            insertCmd.Parameters.AddWithValue("@releaseYear", request.ReleaseYear);
+            insertCmd.Parameters.AddWithValue("@runtimeMinutes", (object?)request.RuntimeMinutes ?? System.DBNull.Value);
+            insertCmd.Parameters.AddWithValue("@synopsis", (object?)request.Synopsis ?? System.DBNull.Value);
+            insertCmd.ExecuteNonQuery();
+
+            // Retrieve the new row id inside the transaction.
+            using var idCmd = connection.CreateCommand();
+            idCmd.Transaction = transaction;
+            idCmd.CommandText = "SELECT last_insert_rowid()";
+            var newId = (long)idCmd.ExecuteScalar()!;
+
+            // Insert genre links inside the same transaction.
+            InsertGenreLinks(connection, transaction, newId, request.GenreIds);
+
+            transaction.Commit();
+            return newId;
+        }
+        finally
+        {
+            if (ownsConnection)
+                connection.Dispose();
+        }
+    }
+
+    public void UpdateMovie(UpdateMovieRequest request)
+    {
+        var connection = OpenConnection();
+        var ownsConnection = _sharedConnection is null;
+        try
+        {
+            // Verify the movie exists before opening a transaction.
+            using var existsCmd = connection.CreateCommand();
+            existsCmd.CommandText = "SELECT 1 FROM movies WHERE id = @id";
+            existsCmd.Parameters.AddWithValue("@id", request.Id);
+            var exists = existsCmd.ExecuteScalar();
+            if (exists is null)
+            {
+                throw new FaultException<NotFoundFault>(
+                    new NotFoundFault
+                    {
+                        Message = $"Movie {request.Id} not found",
+                        MovieId = request.Id,
+                    },
+                    new FaultReason($"Movie {request.Id} not found"));
+            }
+
+            // Validate genre existence before opening the transaction
+            if (request.GenreIds.Count > 0)
+                ValidateGenreIdsExist(connection, request.GenreIds);
+
+            using var transaction = connection.BeginTransaction();
+
+            using var updateCmd = connection.CreateCommand();
+            updateCmd.Transaction = transaction;
+            updateCmd.CommandText =
+                "UPDATE movies SET " +
+                "title = @title, " +
+                "director = @director, " +
+                "release_year = @releaseYear, " +
+                "runtime_minutes = @runtimeMinutes, " +
+                "synopsis = @synopsis, " +
+                "updated_at = strftime('%Y-%m-%dT%H:%M:%S','now') " +
+                "WHERE id = @id";
+            updateCmd.Parameters.AddWithValue("@title", request.Title);
+            updateCmd.Parameters.AddWithValue("@director", (object?)request.Director ?? System.DBNull.Value);
+            updateCmd.Parameters.AddWithValue("@releaseYear", request.ReleaseYear);
+            updateCmd.Parameters.AddWithValue("@runtimeMinutes", (object?)request.RuntimeMinutes ?? System.DBNull.Value);
+            updateCmd.Parameters.AddWithValue("@synopsis", (object?)request.Synopsis ?? System.DBNull.Value);
+            updateCmd.Parameters.AddWithValue("@id", request.Id);
+            updateCmd.ExecuteNonQuery();
+
+            using var deleteCmd = connection.CreateCommand();
+            deleteCmd.Transaction = transaction;
+            deleteCmd.CommandText = "DELETE FROM movie_genres WHERE movie_id = @movieId";
+            deleteCmd.Parameters.AddWithValue("@movieId", request.Id);
+            deleteCmd.ExecuteNonQuery();
+
+            // Insert new genre links inside the same transaction.
+            InsertGenreLinks(connection, transaction, request.Id, request.GenreIds);
+
+            transaction.Commit();
+        }
+        finally
+        {
+            if (ownsConnection)
+                connection.Dispose();
+        }
+    }
+
+    // Private helpers
+
+
+    // Validates that all requested genre IDs exist in the genres table.
+    // Builds a parameterised IN-list using '?' placeholders — never string-concatenates
+    private static void ValidateGenreIdsExist(SqliteConnection connection, List<int> genreIds)
+    {
+        // Build: SELECT id FROM genres WHERE id IN (?,?,?...)
+        var placeholders = string.Join(",", genreIds.Select((_, i) => $"@gp{i}"));
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = $"SELECT id FROM genres WHERE id IN ({placeholders})";
+        for (var i = 0; i < genreIds.Count; i++)
+            cmd.Parameters.AddWithValue($"@gp{i}", genreIds[i]);
+
+        var foundIds = new HashSet<long>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+            foundIds.Add(reader.GetInt64(0));
+
+        var missing = genreIds.Where(id => !foundIds.Contains(id)).ToList();
+        if (missing.Count > 0)
+        {
+            var msg = $"Unknown genre id(s): {string.Join(", ", missing)}";
+            var fault = new ValidationFault
+            {
+                Message = msg,
+                Code = "validation_error",
+                Errors = missing.Select(id => $"genre_id {id} does not exist").ToList(),
+            };
+            throw new FaultException<ValidationFault>(fault, new FaultReason(msg));
+        }
+    }
+
+    private static void InsertGenreLinks(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        long movieId,
+        List<int> genreIds)
+    {
+        foreach (var genreId in genreIds)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.Transaction = transaction;
+            cmd.CommandText = "INSERT INTO movie_genres (movie_id, genre_id) VALUES (@movieId, @genreId)";
+            cmd.Parameters.AddWithValue("@movieId", movieId);
+            cmd.Parameters.AddWithValue("@genreId", genreId);
+            cmd.ExecuteNonQuery();
+        }
     }
 }

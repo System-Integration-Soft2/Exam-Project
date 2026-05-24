@@ -3,6 +3,7 @@ using SoapService.Contracts;
 using SoapService.Contracts.Dtos;
 using SoapService.Faults;
 using SoapService.Repositories;
+using SoapService.Validation;
 
 namespace SoapService.Services;
 
@@ -39,11 +40,21 @@ public class MovieService : IMovieService
 
     public MovieDto CreateMovie(CreateMovieRequest request)
     {
-        throw new NotImplementedException("P3");
+        // Field-level validation
+        MovieValidator.Validate(request);
+
+        var newId = _repo.CreateMovie(request);
+
+        return _repo.GetMovieById(newId)!;
     }
 
     public MovieDto UpdateMovie(UpdateMovieRequest request)
     {
-        throw new NotImplementedException("P3");
+        // Field-level validation
+        MovieValidator.Validate(request);
+
+        _repo.UpdateMovie(request);
+
+        return _repo.GetMovieById(request.Id)!;
     }
 }

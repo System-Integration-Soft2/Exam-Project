@@ -15,8 +15,11 @@ public interface IMovieService
     MovieDto GetMovieById(GetMovieByIdRequest request);
 
     [OperationContract]
+    [FaultContract(typeof(ValidationFault))]
     MovieDto CreateMovie(CreateMovieRequest request);
 
     [OperationContract]
+    [FaultContract(typeof(ValidationFault))]
+    [FaultContract(typeof(NotFoundFault))]
     MovieDto UpdateMovie(UpdateMovieRequest request);
 }

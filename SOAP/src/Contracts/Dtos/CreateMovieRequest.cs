@@ -9,7 +9,7 @@ public class CreateMovieRequest
     public string Title { get; set; } = string.Empty;
 
     [DataMember(Order = 2)]
-    public string Director { get; set; } = string.Empty;
+    public string? Director { get; set; }
 
     [DataMember(Order = 3)]
     public int ReleaseYear { get; set; }
