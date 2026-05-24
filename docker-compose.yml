@@ -41,7 +41,7 @@ services:
     volumes:
       - ./catalog.db:/data/catalog.db
     env_file:
-      - SOAP/.env.example
+      - .env
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8001/healthz || exit 1"]
       interval: 10s
