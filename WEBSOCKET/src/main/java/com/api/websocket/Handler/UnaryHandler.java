@@ -54,8 +54,6 @@ public class UnaryHandler extends TextWebSocketHandler {
 
         String json = objectMapper.writeValueAsString(response);
         session.sendMessage(new TextMessage(json));
-
-        session.close();
-
+        
     }
 }

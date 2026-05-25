@@ -31,7 +31,6 @@ public class StreamingHandler extends TextWebSocketHandler {
             movieId = Integer.parseInt(payload.trim());
         } catch (NumberFormatException e) {
             session.sendMessage(new TextMessage("Fejl i Film ID format. Vær sikker på at du sender et gyldigt heltal."));
-            session.close();
             return;
         }
 
@@ -40,7 +39,6 @@ public class StreamingHandler extends TextWebSocketHandler {
         // Film ikke fundet
         if (movieOrder.isEmpty()) {
             session.sendMessage(new TextMessage("Film med id " + movieId + " blev ikke fundet"));
-            session.close();
             return;
         }
 
@@ -51,7 +49,6 @@ public class StreamingHandler extends TextWebSocketHandler {
         // Hvis ordren allerede er leveret, send en besked og luk forbindelsen
         if (movie1.getStatus().equals("DELIVERED")) {
             session.sendMessage(new TextMessage("Ordre er allerede leveret. Ingen yderligere opdateringer."));
-            session.close();
             return;
         }
 
@@ -70,7 +67,5 @@ public class StreamingHandler extends TextWebSocketHandler {
             session.sendMessage(new TextMessage(json));
             Thread.sleep(2000);
         }
-
-        session.close();
     }
 }
