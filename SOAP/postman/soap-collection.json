@@ -5,7 +5,8 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8001", "type": "string" }
+    { "key": "base_url", "value": "http://localhost:8001", "type": "string" },
+    { "key": "createdMovieId", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -142,6 +143,50 @@
               }
             }
           ]
+        },
+        {
+          "name": "ListMovies wrong SOAPAction (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"http://soapservice.example.com/movies/service/IMovieService/NotAnOperation\""
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"http://soapservice.example.com/movies/service\">\n  <soap:Body>\n    <tns:ListMovies />\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "{{base_url}}/movies.svc",
+              "host": ["{{base_url}}"],
+              "path": ["movies.svc"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response contains soap:Fault', function () {",
+                  "    pm.expect(pm.response.text()).to.include('<s:Fault>');",
+                  "});",
+                  "pm.test('Response contains ActionNotSupported faultcode', function () {",
+                  "    pm.expect(pm.response.text()).to.include('ActionNotSupported');",
+                  "});",
+                  "pm.test('Response contains faultstring', function () {",
+                  "    pm.expect(pm.response.text()).to.include('<faultstring>');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     },
@@ -188,7 +233,9 @@
                   "});",
                   "pm.test('Response contains CreatedAt timestamp', function () {",
                   "    pm.expect(pm.response.text()).to.include('<a:CreatedAt>');",
-                  "});"
+                  "});",
+                  "var idMatch = pm.response.text().match(/<a:Id>([1-9][0-9]*)<\\/a:Id>/);",
+                  "if (idMatch) { pm.collectionVariables.set('createdMovieId', idMatch[1]); }"
                 ],
                 "type": "text/javascript"
               }
@@ -375,8 +422,149 @@
                }
              }
            ]
-         }
-       ]
-     }
-   ]
+        },
+        {
+          "name": "UpdateMovie empty title (negative - ValidationFault)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"http://soapservice.example.com/movies/service/IMovieService/UpdateMovie\""
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"http://soapservice.example.com/movies/service\" xmlns:m=\"http://soapservice.example.com/movies\">\n  <soap:Body>\n    <tns:UpdateMovie>\n      <tns:request>\n        <m:Id>1</m:Id>\n        <m:Title></m:Title>\n        <m:ReleaseYear>2024</m:ReleaseYear>\n      </tns:request>\n    </tns:UpdateMovie>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "{{base_url}}/movies.svc",
+              "host": ["{{base_url}}"],
+              "path": ["movies.svc"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response contains soap:Fault', function () {",
+                  "    pm.expect(pm.response.text()).to.include('<s:Fault>');",
+                  "});",
+                  "pm.test('Response contains ValidationFault detail', function () {",
+                  "    pm.expect(pm.response.text()).to.include('ValidationFault');",
+                  "});",
+                  "pm.test('Response contains validation_error code', function () {",
+                  "    pm.expect(pm.response.text()).to.include('validation_error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DeleteMovie (cleanup)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"http://soapservice.example.com/movies/service/IMovieService/DeleteMovie\""
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"http://soapservice.example.com/movies/service\" xmlns:m=\"http://soapservice.example.com/movies\">\n  <soap:Body>\n    <tns:DeleteMovie>\n      <tns:request>\n        <m:Id>{{createdMovieId}}</m:Id>\n      </tns:request>\n    </tns:DeleteMovie>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "{{base_url}}/movies.svc",
+              "host": ["{{base_url}}"],
+              "path": ["movies.svc"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var id = pm.collectionVariables.get('createdMovieId');",
+                  "if (!id) {",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response does not contain soap:Fault', function () {",
+                  "    pm.expect(pm.response.text()).to.not.include('<s:Fault>');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DeleteMovie id=999 (negative - NotFoundFault)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"http://soapservice.example.com/movies/service/IMovieService/DeleteMovie\""
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"http://soapservice.example.com/movies/service\" xmlns:m=\"http://soapservice.example.com/movies\">\n  <soap:Body>\n    <tns:DeleteMovie>\n      <tns:request>\n        <m:Id>999</m:Id>\n      </tns:request>\n    </tns:DeleteMovie>\n  </soap:Body>\n</soap:Envelope>"
+            },
+            "url": {
+              "raw": "{{base_url}}/movies.svc",
+              "host": ["{{base_url}}"],
+              "path": ["movies.svc"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response contains soap:Fault', function () {",
+                  "    pm.expect(pm.response.text()).to.include('<s:Fault>');",
+                  "});",
+                  "pm.test('Response contains NotFoundFault detail', function () {",
+                  "    pm.expect(pm.response.text()).to.include('NotFoundFault');",
+                  "});",
+                  "pm.test('Response contains faultstring', function () {",
+                  "    pm.expect(pm.response.text()).to.include('<faultstring>');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
