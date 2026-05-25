@@ -45,6 +45,23 @@ public class MovieService : IMovieService
 
         MovieValidator.Validate(request);
 
+        if (request.GenreIds.Count > 0)
+        {
+            var missingIds = _repo.FindMissingGenreIds(request.GenreIds);
+            if (missingIds.Count > 0)
+            {
+                var msg = $"Unknown genre id(s): {string.Join(", ", missingIds)}";
+                throw new FaultException<ValidationFault>(
+                    new ValidationFault
+                    {
+                        Message = msg,
+                        Code = "validation_error",
+                        Errors = missingIds.Select(id => $"genre_id {id} does not exist").ToList(),
+                    },
+                    new FaultReason(msg));
+            }
+        }
+
         var newId = _repo.CreateMovie(request);
 
         return _repo.GetMovieById(newId)!;
@@ -57,8 +74,48 @@ public class MovieService : IMovieService
 
         MovieValidator.Validate(request);
 
-        _repo.UpdateMovie(request);
+        if (request.GenreIds.Count > 0)
+        {
+            var missingIds = _repo.FindMissingGenreIds(request.GenreIds);
+            if (missingIds.Count > 0)
+            {
+                var msg = $"Unknown genre id(s): {string.Join(", ", missingIds)}";
+                throw new FaultException<ValidationFault>(
+                    new ValidationFault
+                    {
+                        Message = msg,
+                        Code = "validation_error",
+                        Errors = missingIds.Select(id => $"genre_id {id} does not exist").ToList(),
+                    },
+                    new FaultReason(msg));
+            }
+        }
+
+        if (!_repo.UpdateMovie(request))
+        {
+            throw new FaultException<NotFoundFault>(
+                new NotFoundFault
+                {
+                    Message = $"Movie {request.Id} not found",
+                    MovieId = request.Id,
+                },
+                new FaultReason($"Movie {request.Id} not found"));
+        }
 
         return _repo.GetMovieById(request.Id)!;
+    }
+
+    public void DeleteMovie(DeleteMovieRequest request)
+    {
+        if (!_repo.DeleteMovie(request.Id))
+        {
+            throw new FaultException<NotFoundFault>(
+                new NotFoundFault
+                {
+                    Message = $"Movie {request.Id} not found",
+                    MovieId = request.Id,
+                },
+                new FaultReason($"Movie {request.Id} not found"));
+        }
     }
 }

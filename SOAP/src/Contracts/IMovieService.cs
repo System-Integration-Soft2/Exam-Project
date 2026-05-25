@@ -22,4 +22,8 @@ public interface IMovieService
     [FaultContract(typeof(ValidationFault))]
     [FaultContract(typeof(NotFoundFault))]
     MovieDto UpdateMovie(UpdateMovieRequest request);
+
+    [OperationContract]
+    [FaultContract(typeof(NotFoundFault))]
+    void DeleteMovie(DeleteMovieRequest request);
 }

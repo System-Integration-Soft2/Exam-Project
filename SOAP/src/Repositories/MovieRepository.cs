@@ -1,7 +1,5 @@
-using CoreWCF;
 using Microsoft.Data.Sqlite;
 using SoapService.Contracts.Dtos;
-using SoapService.Faults;
 
 namespace SoapService.Repositories;
 
@@ -166,16 +164,46 @@ public class MovieRepository : IMovieRepository
         return genres;
     }
 
+    // Returns the list of genre IDs from genreIds that do not exist in the genres table.
+    // Returns an empty list when all IDs are valid.
+    public List<int> FindMissingGenreIds(List<int> genreIds)
+    {
+        var connection = OpenConnection();
+        var ownsConnection = _sharedConnection is null;
+        try
+        {
+            return FindMissingGenreIds(connection, genreIds);
+        }
+        finally
+        {
+            if (ownsConnection)
+                connection.Dispose();
+        }
+    }
+
+    private static List<int> FindMissingGenreIds(SqliteConnection connection, List<int> genreIds)
+    {
+        // Build: SELECT id FROM genres WHERE id IN (@gp0,@gp1,...)
+        var placeholders = string.Join(",", genreIds.Select((_, i) => $"@gp{i}"));
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = $"SELECT id FROM genres WHERE id IN ({placeholders})";
+        for (var i = 0; i < genreIds.Count; i++)
+            cmd.Parameters.AddWithValue($"@gp{i}", genreIds[i]);
+
+        var foundIds = new HashSet<long>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+            foundIds.Add(reader.GetInt64(0));
+
+        return genreIds.Where(id => !foundIds.Contains(id)).ToList();
+    }
+
     public long CreateMovie(CreateMovieRequest request)
     {
         var connection = OpenConnection();
         var ownsConnection = _sharedConnection is null;
         try
         {
-            // Validate genre existence before opening the transaction
-            if (request.GenreIds.Count > 0)
-                ValidateGenreIdsExist(connection, request.GenreIds);
-
             // Single explicit transaction wrapping INSERT + genre links so a mid-loop genre-insert failure cannot leave an orphaned movie row.
             using var transaction = connection.BeginTransaction();
 
@@ -212,32 +240,12 @@ public class MovieRepository : IMovieRepository
         }
     }
 
-    public void UpdateMovie(UpdateMovieRequest request)
+    public bool UpdateMovie(UpdateMovieRequest request)
     {
         var connection = OpenConnection();
         var ownsConnection = _sharedConnection is null;
         try
         {
-            // Verify the movie exists before opening a transaction.
-            using var existsCmd = connection.CreateCommand();
-            existsCmd.CommandText = "SELECT 1 FROM movies WHERE id = @id";
-            existsCmd.Parameters.AddWithValue("@id", request.Id);
-            var exists = existsCmd.ExecuteScalar();
-            if (exists is null)
-            {
-                throw new FaultException<NotFoundFault>(
-                    new NotFoundFault
-                    {
-                        Message = $"Movie {request.Id} not found",
-                        MovieId = request.Id,
-                    },
-                    new FaultReason($"Movie {request.Id} not found"));
-            }
-
-            // Validate genre existence before opening the transaction
-            if (request.GenreIds.Count > 0)
-                ValidateGenreIdsExist(connection, request.GenreIds);
-
             using var transaction = connection.BeginTransaction();
 
             using var updateCmd = connection.CreateCommand();
@@ -257,7 +265,13 @@ public class MovieRepository : IMovieRepository
             updateCmd.Parameters.AddWithValue("@runtimeMinutes", (object?)request.RuntimeMinutes ?? System.DBNull.Value);
             updateCmd.Parameters.AddWithValue("@synopsis", (object?)request.Synopsis ?? System.DBNull.Value);
             updateCmd.Parameters.AddWithValue("@id", request.Id);
-            updateCmd.ExecuteNonQuery();
+            var rows = updateCmd.ExecuteNonQuery();
+
+            if (rows == 0)
+            {
+                // Row does not exist — do not commit; return false for service to throw NotFoundFault
+                return false;
+            }
 
             using var deleteCmd = connection.CreateCommand();
             deleteCmd.Transaction = transaction;
@@ -269,6 +283,7 @@ public class MovieRepository : IMovieRepository
             InsertGenreLinks(connection, transaction, request.Id, request.GenreIds);
 
             transaction.Commit();
+            return true;
         }
         finally
         {
@@ -277,36 +292,22 @@ public class MovieRepository : IMovieRepository
         }
     }
 
-    // Private helpers
-
-
-    // Validates that all requested genre IDs exist in the genres table.
-    // Builds a parameterised IN-list using '?' placeholders — never string-concatenates
-    private static void ValidateGenreIdsExist(SqliteConnection connection, List<int> genreIds)
+    public bool DeleteMovie(long id)
     {
-        // Build: SELECT id FROM genres WHERE id IN (?,?,?...)
-        var placeholders = string.Join(",", genreIds.Select((_, i) => $"@gp{i}"));
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText = $"SELECT id FROM genres WHERE id IN ({placeholders})";
-        for (var i = 0; i < genreIds.Count; i++)
-            cmd.Parameters.AddWithValue($"@gp{i}", genreIds[i]);
-
-        var foundIds = new HashSet<long>();
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-            foundIds.Add(reader.GetInt64(0));
-
-        var missing = genreIds.Where(id => !foundIds.Contains(id)).ToList();
-        if (missing.Count > 0)
+        var connection = OpenConnection();
+        var ownsConnection = _sharedConnection is null;
+        try
         {
-            var msg = $"Unknown genre id(s): {string.Join(", ", missing)}";
-            var fault = new ValidationFault
-            {
-                Message = msg,
-                Code = "validation_error",
-                Errors = missing.Select(id => $"genre_id {id} does not exist").ToList(),
-            };
-            throw new FaultException<ValidationFault>(fault, new FaultReason(msg));
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "DELETE FROM movies WHERE id = @id";
+            cmd.Parameters.AddWithValue("@id", id);
+            var rows = cmd.ExecuteNonQuery();
+            return rows > 0;
+        }
+        finally
+        {
+            if (ownsConnection)
+                connection.Dispose();
         }
     }
 

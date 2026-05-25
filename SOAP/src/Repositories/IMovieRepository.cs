@@ -7,6 +7,8 @@ public interface IMovieRepository
     IReadOnlyList<MovieDto> ListMovies();
     MovieDto? GetMovieById(long id);
 
+    List<int> FindMissingGenreIds(List<int> genreIds);
     long CreateMovie(CreateMovieRequest request);
-    void UpdateMovie(UpdateMovieRequest request);
+    bool UpdateMovie(UpdateMovieRequest request);
+    bool DeleteMovie(long id);
 }
