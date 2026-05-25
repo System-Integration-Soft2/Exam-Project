@@ -19,6 +19,24 @@ services:
       retries: 3
       start_period: 30s
 
+
+      websocket-api:
+    build:
+      context: .
+      dockerfile: WEBSOCKET/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./catalog.db:/data/catalog.db
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   redis:
     image: redis:7-alpine
     ports:
