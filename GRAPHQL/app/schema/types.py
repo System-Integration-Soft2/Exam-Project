@@ -2,8 +2,13 @@
 GraphQL output types for the movie catalog API.
 
 Types describe the public GraphQL schema.
-Services fetch database rows.
+Services fetch database rows (returned as plain dicts).
 Mapper functions convert rows to Strawberry types.
+
+Nested fields (@strawberry.field) are resolved lazily: a client that
+asks only for `movie { title }` never triggers genre or review queries.
+The bidirectional traversal (Movie -> Genre -> Movie) is safe because
+QueryDepthLimiter caps document depth at 10 (see app.config).
 """
 
 from __future__ import annotations
@@ -40,6 +45,7 @@ class Genre:
 
     @strawberry.field
     def movies(self) -> list[Movie]:
+        """All movies belonging to this genre. Resolved lazily."""
         rows = movies_service.get_by_genre_id(int(self.id))
         return [movie_from_row(row) for row in rows]
 
@@ -94,10 +100,10 @@ class Movie:
     @strawberry.field
     def rating_summary(self) -> RatingSummary:
         row = movies_service.get_rating_summary(int(self.id))
-        return RatingSummary(
-            count=row["count"],
-            average=row["average"],
-        )
+        return RatingSummary(count=row["count"], average=row["average"])
+
+
+# --- dict -> type mappers --------------------------------------------------
 
 
 def movie_from_row(row) -> Movie:

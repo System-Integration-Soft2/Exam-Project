@@ -41,10 +41,9 @@ schema = strawberry.Schema(
 # ---------------------------------------------------------------------
 # Create the GraphQL router.
 #
-# GraphQLRouter is a FastAPI-compatible router that handles GraphQL
+# FastAPI-compatible router that handles GraphQL
 # requests: it parses incoming POSTs, runs them against the schema,
-# and returns JSON responses. It also serves GraphiQL on GET requests
-# to the same path for interactive testing in a browser.
+# and returns JSON responses.
 # ---------------------------------------------------------------------
 graphql_app = GraphQLRouter(schema)
 
@@ -61,19 +60,6 @@ app = FastAPI(
 
 # ---------------------------------------------------------------------
 # CORS configuration.
-#
-# CORS (Cross-Origin Resource Sharing) controls which browser-based
-# origins may call the API. By restricting allowed origins explicitly,
-# we prevent untrusted websites from making authenticated requests on
-# behalf of a logged-in user (CSRF protection at the browser level).
-#
-# Note: this API has no authentication, so CSRF is not a practical
-# threat — there is nothing to "ride on" because there are no
-# cookies or sessions. The CORS config is here as a defense-in-depth
-# measure and to demonstrate awareness of the cross-origin rules.
-#
-# In production we would tighten this further to the exact origin(s)
-# of our frontend(s); the wildcards here are for development.
 # ---------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
@@ -98,10 +84,6 @@ app.include_router(graphql_app, prefix="/graphql")
 
 # ---------------------------------------------------------------------
 # Health check endpoint.
-#
-# A lightweight endpoint that confirms the server is running. Useful
-# for Docker healthchecks, monitoring tools, and quickly verifying
-# during development that the server started successfully.
 # ---------------------------------------------------------------------
 @app.get("/health")
 def health_check() -> dict:
