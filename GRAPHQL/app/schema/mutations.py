@@ -1,16 +1,20 @@
-"""GraphQL mutations for write operations."""
+"""GraphQL mutations for write operations.
+
+Two write operations on the movie catalog: addMovie and updateMovie.
+Both return the resulting Movie so the client can request whatever
+fields it needs in the same request (e.g. the new id, or the updated
+genre list).
+
+updateMovie does a partial update: any field left out keeps its
+existing value. The client only needs to send what it wants to change.
+"""
 
 from typing import Optional
 
 import strawberry
 
-from app.schema.types import Movie, Review, movie_from_row, review_from_row
-from app.services import movies_service, review_service
-
-# Reviews are attributed to a fixed seed user because this GraphQL service
-# has no authentication (auth lives in the REST service). In a real system
-# the user would come from an authenticated request context.
-SEED_USER_ID = 1
+from app.schema.types import Movie, movie_from_row
+from app.services import movies_service
 
 
 @strawberry.type
@@ -25,6 +29,7 @@ class Mutation:
         synopsis: Optional[str] = None,
         genre_ids: Optional[list[strawberry.ID]] = None,
     ) -> Movie:
+        """Create a movie and optionally link it to genres."""
         row = movies_service.create(
             title=title,
             release_year=release_year,
@@ -36,27 +41,25 @@ class Mutation:
         return movie_from_row(row)
 
     @strawberry.mutation
-    def add_review(
+    def update_movie(
         self,
-        movie_id: strawberry.ID,
-        rating: int,
-        comment: Optional[str] = None,
-    ) -> Review:
-        if not 1 <= rating <= 10:
-            raise ValueError("rating must be between 1 and 10")
-
-        row = review_service.create(
-            movie_id=int(movie_id),
-            user_id=SEED_USER_ID,
-            rating=rating,
-            comment=comment,
+        id: strawberry.ID,
+        title: Optional[str] = None,
+        release_year: Optional[int] = None,
+        runtime_minutes: Optional[int] = None,
+        director: Optional[str] = None,
+        synopsis: Optional[str] = None,
+        genre_ids: Optional[list[strawberry.ID]] = None,
+    ) -> Movie:
+        """Partial update. Any argument left out keeps its existing value.
+        Pass genre_ids to replace the movie's genre links; omit it to keep them."""
+        row = movies_service.update(
+            movie_id=int(id),
+            title=title,
+            release_year=release_year,
+            runtime_minutes=runtime_minutes,
+            director=director,
+            synopsis=synopsis,
+            genre_ids=[int(gid) for gid in genre_ids] if genre_ids is not None else None,
         )
-        return review_from_row(row)
-
-    @strawberry.mutation
-    def delete_review(self, id: strawberry.ID) -> Optional[Review]:
-        """Delete a review and return what was deleted. Returns null if not found."""
-        row = review_service.delete(int(id))
-        if row is None:
-            return None
-        return review_from_row(row)
+        return movie_from_row(row)
