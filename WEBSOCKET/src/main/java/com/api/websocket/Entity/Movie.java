@@ -11,11 +11,14 @@ import lombok.Setter;
 @Table(name = "movies")
 public class Movie {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
     private String title;
-    private int releaseYear;
-    private String director;
-    private String status;
+    @Column(name = "release_year")
+    private Integer releaseYear;
 
+    @Column(name = "runtime_minutes")
+    private Integer runtimeMinutes;
+    private String director;
+    private String synopsis;
+    
 }

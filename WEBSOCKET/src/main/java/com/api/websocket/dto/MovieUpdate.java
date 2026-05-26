@@ -9,9 +9,10 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class MovieUpdate {
-    private int id;
+    private Integer id;
     private String title;
     private int releaseYear;
+    private Integer runtimeMinutes;
     private String director;
-    private String status;
+    private String synopsis;
 }

@@ -43,15 +43,6 @@ public class StreamingHandler extends TextWebSocketHandler {
         }
 
 
-
-        Movie movie1 = movieOrder.get();
-
-        // Hvis ordren allerede er leveret, send en besked og luk forbindelsen
-        if (movie1.getStatus().equals("DELIVERED")) {
-            session.sendMessage(new TextMessage("Ordre er allerede leveret. Ingen yderligere opdateringer."));
-            return;
-        }
-
         // Simulerer opdateringer ved at sende den aktuelle status for ordren og derefter sende opdateringer hver 2. sekund
         List<Movie> movies = movieRepository.findAll();
 
@@ -60,8 +51,9 @@ public class StreamingHandler extends TextWebSocketHandler {
                     movie.getId(),
                     movie.getTitle(),
                     movie.getReleaseYear(),
+                    movie.getRuntimeMinutes(),
                     movie.getDirector(),
-                    movie.getStatus()
+                    movie.getSynopsis()
             );
             String json = objectMapper.writeValueAsString(response);
             session.sendMessage(new TextMessage(json));

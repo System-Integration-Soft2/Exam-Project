@@ -48,8 +48,9 @@ public class UnaryHandler extends TextWebSocketHandler {
                 movie.get().getId(),
                 movie.get().getTitle(),
                 movie.get().getReleaseYear(),
+                movie.get().getRuntimeMinutes(),
                 movie.get().getDirector(),
-                movie.get().getStatus()
+                movie.get().getSynopsis()
         );
 
         String json = objectMapper.writeValueAsString(response);

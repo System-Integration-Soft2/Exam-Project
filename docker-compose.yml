@@ -19,8 +19,7 @@ services:
       retries: 3
       start_period: 30s
 
-
-      websocket-api:
+  websocket-api:
     build:
       context: .
       dockerfile: WEBSOCKET/Dockerfile
