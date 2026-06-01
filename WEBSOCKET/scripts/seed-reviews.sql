@@ -2,7 +2,7 @@
 -- Idempotent: INSERT OR IGNORE with explicit primary keys starting at 101
 -- to avoid collisions with reviews created by other services (gRPC, REST).
 -- Uses user_id=1 (test_user, created by GRPC/add_test_review.py).
--- Run: sqlite3 catalog.db < WEBSOCKET/scripts/seed-reviews.sql
+-- Run: sqlite3 data/catalog.db < WEBSOCKET/scripts/seed-reviews.sql
 
 PRAGMA foreign_keys = ON;
 

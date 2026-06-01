@@ -10,6 +10,6 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-sqlite3 "$REPO_ROOT/catalog.db" < "$REPO_ROOT/WEBSOCKET/scripts/seed-reviews.sql"
+sqlite3 "$REPO_ROOT/data/catalog.db" < "$REPO_ROOT/WEBSOCKET/scripts/seed-reviews.sql"
 
 echo "Seeded 10 reviews (ids 101-110) across movies 1-4."

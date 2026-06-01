@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class StreamingHandler extends TextWebSocketHandler {
@@ -110,6 +109,7 @@ public class StreamingHandler extends TextWebSocketHandler {
         }
 
         state.subscribedMovieIds.add(movieId);
+        state.lastSeenByMovie.putIfAbsent(movieId, 0);
 
         // send all existing reviews for this movie immediately.
         List<Review> catchUp;
@@ -128,8 +128,8 @@ public class StreamingHandler extends TextWebSocketHandler {
             synchronized (session) {
                 session.sendMessage(new TextMessage(json));
             }
-            // Update lastSeenReviewId so the polling task doesn't re-send these.
-            state.lastSeenReviewId.accumulateAndGet(review.getId(), Math::max);
+            // Update lastSeenByMovie so the polling task doesn't re-send these.
+            state.lastSeenByMovie.merge(review.getMovieId(), review.getId(), Math::max);
         }
     }
 
@@ -142,17 +142,19 @@ public class StreamingHandler extends TextWebSocketHandler {
         }
 
         try {
-            int sinceId = state.lastSeenReviewId.get();
-            List<Review> newReviews =
-                    reviewRepository.findByMovieIdInAndIdGreaterThanOrderByIdAsc(
-                            subscribedIds, sinceId);
+            for (Integer movieId : subscribedIds) {
+                int sinceId = state.lastSeenByMovie.getOrDefault(movieId, 0);
+                List<Review> newReviews =
+                        reviewRepository.findByMovieIdInAndIdGreaterThanOrderByIdAsc(
+                                List.of(movieId), sinceId);
 
-            for (Review review : newReviews) {
-                String json = objectMapper.writeValueAsString(toResponse(review));
-                synchronized (session) {
-                    session.sendMessage(new TextMessage(json));
+                for (Review review : newReviews) {
+                    String json = objectMapper.writeValueAsString(toResponse(review));
+                    synchronized (session) {
+                        session.sendMessage(new TextMessage(json));
+                    }
+                    state.lastSeenByMovie.merge(review.getMovieId(), review.getId(), Math::max);
                 }
-                state.lastSeenReviewId.accumulateAndGet(review.getId(), Math::max);
             }
 
         } catch (DataAccessException | IOException e) {
@@ -172,7 +174,10 @@ public class StreamingHandler extends TextWebSocketHandler {
 
     private void sendError(WebSocketSession session, String error, String message) throws Exception {
         ErrorResponse errorResponse = new ErrorResponse(error, message);
-        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(errorResponse)));
+        String json = objectMapper.writeValueAsString(errorResponse);
+        synchronized (session) {
+            session.sendMessage(new TextMessage(json));
+        }
     }
 
 
@@ -192,7 +197,7 @@ public class StreamingHandler extends TextWebSocketHandler {
 
     private static final class SessionState {
         final Set<Integer> subscribedMovieIds = ConcurrentHashMap.newKeySet();
-        final AtomicInteger lastSeenReviewId = new AtomicInteger(0);
+        final ConcurrentHashMap<Integer, Integer> lastSeenByMovie = new ConcurrentHashMap<>();
         volatile ScheduledExecutorService scheduler;
     }
 }

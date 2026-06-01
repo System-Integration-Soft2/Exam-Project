@@ -45,7 +45,7 @@ Spring Boot WebSocket service exposing two endpoints over a shared SQLite catalo
 ## How to run
 
 ```bash
-# Requires catalog.db to exist at the repo root and REST to have booted at least once
+# Requires data/catalog.db to exist and REST to have booted at least once
 # (REST's init_db() seeds the schema and the admin user on first boot).
 docker compose up -d websocket-api
 ```
