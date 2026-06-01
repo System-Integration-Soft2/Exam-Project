@@ -9,8 +9,8 @@ into the query string.
 import sqlite3
 from pathlib import Path
 
-# The shared catalog.db lives in the Exam-Project root, one level above GRPC/
-DB_PATH = Path(__file__).resolve().parent.parent / "catalog.db"
+# The shared catalog.db lives in the data/ directory at the Exam-Project root, one level above GRPC/
+DB_PATH = Path(__file__).resolve().parent.parent / "data" / "catalog.db"
 
 
 def get_connection() -> sqlite3.Connection:

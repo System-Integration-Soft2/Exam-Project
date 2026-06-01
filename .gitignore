@@ -1,1 +1,5 @@
+.idea/
 .env
+__pycache__
+data/catalog.db-shm
+data/catalog.db-wal

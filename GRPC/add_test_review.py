@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 import sqlite3
 
-DB_PATH = Path(__file__).resolve().parent.parent / "catalog.db"
+DB_PATH = Path(__file__).resolve().parent.parent / "data" / "catalog.db"
 
 
 def ensure_test_user(conn: sqlite3.Connection) -> int:

@@ -1,7 +1,7 @@
 # SOAP Movies Service
 
 A C# .NET + CoreWCF SOAP service exposing `ListMovies`, `GetMovieById`,
-`CreateMovie`, and `UpdateMovie` against the shared `catalog.db` SQLite db file.
+`CreateMovie`, and `UpdateMovie` against the shared `data/catalog.db` SQLite db file.
 Runs on port 8001
 
 ## Service surface
@@ -23,7 +23,7 @@ To run without Docker:
 
 ```bash
 cd SOAP
-DATABASE_PATH=../catalog.db dotnet run --project src -c Release
+DATABASE_PATH=../data/catalog.db dotnet run --project src -c Release
 ```
 
 ## Architecture
