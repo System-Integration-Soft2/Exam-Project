@@ -108,7 +108,6 @@ public class StreamingHandler extends TextWebSocketHandler {
             return;
         }
 
-        state.subscribedMovieIds.add(movieId);
         state.lastSeenByMovie.putIfAbsent(movieId, 0);
 
         // send all existing reviews for this movie immediately.
@@ -131,6 +130,10 @@ public class StreamingHandler extends TextWebSocketHandler {
             // Update lastSeenByMovie so the polling task doesn't re-send these.
             state.lastSeenByMovie.merge(review.getMovieId(), review.getId(), Math::max);
         }
+
+        // Add to subscriptions AFTER catch-up is done, so the polling task
+        // doesn't race with the catch-up and send duplicates.
+        state.subscribedMovieIds.add(movieId);
     }
 
 

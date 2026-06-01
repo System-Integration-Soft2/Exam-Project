@@ -10,9 +10,6 @@
 3. Click **Connect**
 4. Send the request payload as JSON in the message field.
 
-> **Prerequisite for streaming tests (Tests 4–6):** run `scripts/seed-reviews.sh`
-> once before executing the streaming tests to populate the reviews table.
-
 ---
 
 # Unary Operations
