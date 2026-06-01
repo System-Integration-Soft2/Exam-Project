@@ -23,3 +23,6 @@ INSERT OR IGNORE INTO reviews (id, movie_id, user_id, rating, comment) VALUES (1
 -- Movie 4 (Pulp Fiction) — 2 reviews
 INSERT OR IGNORE INTO reviews (id, movie_id, user_id, rating, comment) VALUES (109, 4, 1, 10, 'Non-linear storytelling at its finest.');
 INSERT OR IGNORE INTO reviews (id, movie_id, user_id, rating, comment) VALUES (110, 4, 1, 9, 'Sharp dialogue, unforgettable performances.');
+
+-- XSS test: demonstrates that HtmlUtils.htmlEscape() sanitizes malicious content
+INSERT OR IGNORE INTO reviews (id, movie_id, user_id, rating, comment) VALUES (111, 1, 1, 3, '<script>alert(''xss'')</script>');

@@ -1,7 +1,7 @@
 # gRPC Catalog Service
 
 A gRPC API for a movie catalog with a unary RPC and a bidirectional streaming RPC,
-backed by a shared SQLite database (`../catalog.db`).
+backed by a shared SQLite database (`../data/catalog.db`).
 
 ## Why Python?
 
