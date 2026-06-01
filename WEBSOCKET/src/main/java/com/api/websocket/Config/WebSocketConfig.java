@@ -21,11 +21,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 
-        registry.addHandler(unaryHandler, "/ws/movie/detail" )
-                        .setAllowedOrigins("localhost:3000");
+        registry.addHandler(unaryHandler, "/ws/movies/detail")
+                        .setAllowedOriginPatterns("http://localhost:3000");
 
-        registry.addHandler(streamingHandler, "/ws/movie/stream" )
-                .setAllowedOrigins("localhost:3000");
+        registry.addHandler(streamingHandler, "/ws/movies/stream")
+                .setAllowedOriginPatterns("http://localhost:3000");
 
     }
 }
