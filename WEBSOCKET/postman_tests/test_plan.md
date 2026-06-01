@@ -5,10 +5,13 @@
 1. New → WebSocket Request
 2. WebSocket URL:
 
-   * Unary endpoint: `ws://localhost:8080/ws/movie/detail`
-   * Streaming endpoint: `ws://localhost:8080/ws/movie/stream`
+   * Unary endpoint: `ws://localhost:8080/ws/movies/detail`
+   * Streaming endpoint: `ws://localhost:8080/ws/movies/stream`
 3. Click **Connect**
-4. Send the request payload in the message field.
+4. Send the request payload as JSON in the message field.
+
+> **Prerequisite for streaming tests (Tests 4–6):** run `scripts/seed-reviews.sh`
+> once before executing the streaming tests to populate the reviews table.
 
 ---
 
@@ -16,26 +19,38 @@
 
 ## Test 1 — FindMovie (positive)
 
-**Endpoint:** `/ws/movie/detail`
+**Endpoint:** `/ws/movies/detail`
 
 **Request:**
 
-```text
-1
+```json
+{"movieId": 1}
 ```
 
 **Expected:**
-The server successfully establishes the WebSocket connection and returns the full movie details for *Inception* as JSON.
+The server returns a `MovieDetailResponse` JSON object for *Inception* containing all movie fields and a `genres` array.
 
-This demonstrates that the Unary operation correctly fetches data from the SQLite database and returns the result through the WebSocket connection.
+Example response shape:
 
-📸 Screenshot: `01_find_movie_success.png`
+```json
+{
+  "id": 1,
+  "title": "Inception",
+  "releaseYear": 2010,
+  "runtimeMinutes": 148,
+  "director": "Christopher Nolan",
+  "synopsis": "...",
+  "genres": ["Action", "Sci-Fi"]
+}
+```
+
+This demonstrates that the unary operation correctly fetches data from the SQLite database and returns the full movie detail — including the `genres` array — through the WebSocket connection.
 
 ---
 
-## Test 2 — FindMovie (negative — invalid characters)
+## Test 2 — FindMovie (negative — malformed JSON)
 
-**Endpoint:** `/ws/movie/detail`
+**Endpoint:** `/ws/movies/detail`
 
 **Request:**
 
@@ -44,34 +59,34 @@ abc
 ```
 
 **Expected:**
-The server responds with the custom error message:
+The server responds with a structured JSON error envelope:
 
-```text
-Fejl i Film ID format. Vær sikker på at du sender et gyldigt heltal.
+```json
+{"error": "invalid_request", "message": "Malformed JSON: expected {\"movieId\": <integer>}"}
 ```
 
-This demonstrates that the WebSocket service correctly validates the input before processing the request and gracefully handles invalid data by returning an appropriate error message to the client.
-
-📸 Screenshot: `02_find_movie_invalid_characters.png`
+This demonstrates that the WebSocket service validates the input before processing the request and returns a structured error response when the payload cannot be parsed as a `MovieIdRequest`.
 
 ---
 
 ## Test 3 — FindMovie (negative — not found)
 
-**Endpoint:** `/ws/movie/detail`
+**Endpoint:** `/ws/movies/detail`
 
 **Request:**
 
-```text
-99
+```json
+{"movieId": 9999}
 ```
 
 **Expected:**
-The server responds with a custom error message indicating that the requested movie could not be found.
+The server responds with a structured JSON error envelope:
 
-This demonstrates that the WebSocket service correctly handles requests for non-existing resources and gracefully returns an appropriate error response to the client.
+```json
+{"error": "movie_not_found", "message": "No movie found with id 9999"}
+```
 
-📸 Screenshot: `03_find_movie_not_found.png`
+This demonstrates that the WebSocket service correctly handles requests for non-existing resources and returns an appropriate structured error response.
 
 ---
 
@@ -79,28 +94,39 @@ This demonstrates that the WebSocket service correctly handles requests for non-
 
 ## Test 4 — StreamMovie (positive)
 
-**Endpoint:** `/ws/movie/stream`
+**Endpoint:** `/ws/movies/stream`
 
 **Request:**
 
-```text
-1
+```json
+{"movieId": 1}
 ```
 
 **Expected:**
-The server successfully establishes the WebSocket connection and continuously streams movie data back to the client every 2 seconds.
+The server immediately sends all existing reviews for movie 1 as a sequence of `ReviewResponse` frames, then continues to push any new reviews as they are added (polled every 2 seconds). The connection stays open.
 
-The response contains multiple movie objects from the SQLite database returned as JSON through the WebSocket connection.
+Example frame shape:
 
-This demonstrates that the Bidirectional Streaming operation correctly keeps the connection open and continuously streams data between the server and client in real time.
+```json
+{
+  "reviewId": 101,
+  "movieId": 1,
+  "movieTitle": "Inception",
+  "rating": 5,
+  "comment": "Masterpiece.",
+  "createdAt": "2024-01-01T12:00:00"
+}
+```
 
-📸 Screenshot: `04_stream_movie_success.png`
+The client can subscribe to additional movies on the same open connection by sending further `{"movieId": N}` messages. Each new subscription triggers an immediate catch-up of existing reviews for that movie, followed by live polling.
+
+This demonstrates that the bidirectional streaming operation keeps the connection open, maintains per-session subscription state, and pushes new `ReviewResponse` frames to the client as they become available.
 
 ---
 
-## Test 5 — StreamMovie (negative — invalid characters)
+## Test 5 — StreamMovie (negative — malformed JSON)
 
-**Endpoint:** `/ws/movie/stream`
+**Endpoint:** `/ws/movies/stream`
 
 **Request:**
 
@@ -109,27 +135,35 @@ abc
 ```
 
 **Expected:**
-The server responds with a custom error message indicating that the request format is invalid.
+The server responds with a structured JSON error envelope:
 
-This demonstrates that the WebSocket service correctly validates the input before processing the streaming request and gracefully handles invalid data by returning an appropriate error message to the client.
+```json
+{"error": "invalid_request", "message": "Malformed JSON: expected {\"movieId\": <integer>}"}
+```
 
-📸 Screenshot: `05_stream_movie_invalid_characters.png`
+The connection remains open after the error. The client can send a valid `{"movieId": N}` message on the same connection and the subscription will proceed normally.
+
+This demonstrates that the streaming endpoint validates each incoming message independently and does not close the connection on a bad request.
 
 ---
 
 ## Test 6 — StreamMovie (negative — not found)
 
-**Endpoint:** `/ws/movie/stream`
+**Endpoint:** `/ws/movies/stream`
 
 **Request:**
 
-```text
-99
+```json
+{"movieId": 9999}
 ```
 
 **Expected:**
-The server responds with a custom error message indicating that the requested movie could not be found.
+The server responds with a structured JSON error envelope:
 
-This demonstrates that the WebSocket service correctly handles requests for non-existing resources during streaming operations and gracefully returns an appropriate error response to the client.
+```json
+{"error": "movie_not_found", "message": "No movie found with id 9999"}
+```
 
-📸 Screenshot: `06_stream_movie_not_found.png`
+The connection remains open after the error. The client can send a valid `{"movieId": N}` message on the same connection and the subscription will proceed normally.
+
+This demonstrates that the streaming endpoint correctly handles requests for non-existing resources without terminating the session.
