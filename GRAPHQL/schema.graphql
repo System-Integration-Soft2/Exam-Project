@@ -17,6 +17,7 @@ type Movie {
 type Mutation {
   addMovie(title: String!, releaseYear: Int!, runtimeMinutes: Int = null, director: String = null, synopsis: String = null, genreIds: [ID!] = null): Movie!
   updateMovie(id: ID!, title: String = null, releaseYear: Int = null, runtimeMinutes: Int = null, director: String = null, synopsis: String = null, genreIds: [ID!] = null): Movie!
+  deleteMovie(id: ID!): Boolean!
 }
 
 type Query {

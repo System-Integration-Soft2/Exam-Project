@@ -1,6 +1,6 @@
 """GraphQL mutations for write operations.
 
-Two write operations on the movie catalog: addMovie and updateMovie.
+Three write operations on the movie catalog: addMovie, updateMovie, and deleteMovie.
 Both return the resulting Movie so the client can request whatever
 fields it needs in the same request (e.g. the new id, or the updated
 genre list).
