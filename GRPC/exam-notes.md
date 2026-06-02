@@ -1,5 +1,52 @@
 # gRPC — Eksamensnoter
 
+## Filer — overblik
+
+| Fil | Hvad den gør | Eksamensrelevans |
+|-----|-------------|-----------------|
+| `proto/catalog.proto` | Kontrakten — definerer beskeder og RPC-metoder | Skal du kende |
+| `server.py` | Selve API'et — implementerer `GetMovie` og `LiveReviewFeed` | Skal du kende |
+| `client.py` | Testskript til at kalde serveren og demonstrere begge RPCs | Skal du kende |
+| `db.py` | Al databaselogik — viser SQL-injection-forebyggelse | Godt at kende |
+| `security.py` | Input-validering og HTML-escaping — viser XSS-forebyggelse | Godt at kende |
+| `generated/catalog_pb2*.py` | Auto-genereret fra `.proto` — rør den aldrig | Ikke nødvendigt |
+| `add_test_review.py` | Indsætter test-reviews så streaming-demoen virker | Ikke nødvendigt |
+| `Dockerfile` | Docker-opsætning | Ikke nødvendigt |
+
+---
+
+## Hurtige svar — én linje
+
+**Hvad er gRPC?**  
+gRPC = *Google Remote Procedure Call* — et framework til at kalde funktioner på en anden server som om de var lokale, over HTTP/2 med binær Protobuf-serialisering.
+
+**Hvad står RPC for?**  
+*Remote Procedure Call* — kald en funktion der kører på en anden maskine.
+
+**Hvad er Protobuf?**  
+*Protocol Buffers* — Googles binære serialiseringsformat, defineret i `.proto`-filer. Hurtigere og mere kompakt end JSON/XML.
+
+**Hvad er en stub?**  
+Auto-genereret proxy-klasse på klientsiden — den ser ud som en normal Python-klasse men sender kaldet over netværket.
+
+**Hvad er forskellen på unary og streaming?**  
+Unary: ét request, ét response. Streaming: én eller begge sider sender en strøm af beskeder over samme forbindelse.
+
+**Hvorfor HTTP/2 og ikke HTTP/1.1?**  
+HTTP/2 understøtter multiplexing (flere streams på én forbindelse) og er nødvendigt for bidirektionel streaming.
+
+**Hvordan håndterer gRPC fejl?**  
+Via statuskoder (`OK`, `NOT_FOUND`, `INVALID_ARGUMENT` osv.) sat med `context.abort()` — analogt med HTTP-statuskoder.
+
+**Hvorfor er gRPC ikke sårbar over for CSRF?**  
+Ingen cookies, ingen browser-support for native gRPC — en ondsindet side kan ikke sende et gRPC-kald på brugerens vegne.
+
+**Hvad er `.proto`-filens rolle?**  
+Den er den eneste kilde til sandhed — fra den genereres al kode til både server og klient på alle sprog.
+
+**Typiske use cases for gRPC?**  
+Intern microservice-kommunikation, realtids-datastreaming, mobile backends hvor båndbredde er begrænset.
+
 ---
 
 ## Forklar proto-filen (vis kode)
