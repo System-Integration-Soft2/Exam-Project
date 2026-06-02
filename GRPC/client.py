@@ -37,7 +37,7 @@ def call_get_movie(movie_id: int) -> None:
 def call_live_review_feed(movie_ids: list[int]) -> None:
     def request_generator():
         for mid in movie_ids:
-            print(f"→ Subscribing to movie_id={mid}")
+            print(f"Subscribing to movie_id={mid}")
             yield catalog_pb2.ReviewSubscribeRequest(movie_id=mid)
             time.sleep(0.2)
 
@@ -46,7 +46,7 @@ def call_live_review_feed(movie_ids: list[int]) -> None:
         print(f"Listening for new reviews on movies {movie_ids}. Ctrl-C to stop.")
         try:
             for update in stub.LiveReviewFeed(request_generator()):
-                print(f"← [{update.movie_title}] rating={update.rating}/10  '{update.comment}'  ({update.created_at})")
+                print(f"[{update.movie_title}] rating={update.rating}/10  '{update.comment}'  ({update.created_at})")
         except grpc.RpcError as e:
             print(f"Error: {e.code().name} — {e.details()}")
         except KeyboardInterrupt:

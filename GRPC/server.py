@@ -45,24 +45,30 @@ class CatalogServicer(catalog_pb2_grpc.CatalogServiceServicer):
         )
 
     def LiveReviewFeed(self, request_iterator, context):
+        import queue
         subscribed_ids: set[int] = set()
         last_review_id = db.fetch_latest_review_id()
+        incoming: queue.Queue = queue.Queue()
 
         def consume_requests():
             try:
                 for req in request_iterator:
-                    try:
-                        security.validate_movie_id(req.movie_id)
-                        subscribed_ids.add(req.movie_id)
-                        log.info("Subscribed to movie_id=%s", req.movie_id)
-                    except ValueError as e:
-                        log.warning("Invalid subscribe request: %s", e)
+                    incoming.put(req)
             except Exception as exc:
                 log.warning("Request stream ended: %s", exc)
 
         threading.Thread(target=consume_requests, daemon=True).start()
 
         while context.is_active():
+            while not incoming.empty():
+                req = incoming.get_nowait()
+                try:
+                    security.validate_movie_id(req.movie_id)
+                    subscribed_ids.add(req.movie_id)
+                    log.info("Subscribed to movie_id=%s", req.movie_id)
+                except ValueError as e:
+                    log.warning("Invalid subscribe request: %s", e)
+
             if subscribed_ids:
                 new_reviews = db.fetch_new_reviews_for_movies(
                     list(subscribed_ids), last_review_id

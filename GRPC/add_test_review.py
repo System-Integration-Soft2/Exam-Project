@@ -34,7 +34,7 @@ def add_review(movie_id: int, rating: int, comment: str) -> None:
             (movie_id, user_id, rating, comment),
         )
         conn.commit()
-        print(f"✓ Added review for movie_id={movie_id}: {rating}/10 — '{comment}'")
+        print(f"Added review for movie_id={movie_id}: {rating}/10 - '{comment}'")
 
 
 if __name__ == "__main__":
