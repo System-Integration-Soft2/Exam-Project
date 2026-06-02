@@ -6,11 +6,20 @@ SQL-injection — every value is passed as a parameter, never concatenated
 into the query string.
 """
 
+import os
 import sqlite3
 from pathlib import Path
 
-# The shared catalog.db lives in the data/ directory at the Exam-Project root, one level above GRPC/
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "catalog.db"
+# Resolve DB path: prefer DATABASE_PATH env var, fall back to repo-root default.
+_default = Path(__file__).resolve().parent.parent / "data" / "catalog.db"
+DB_PATH = Path(os.environ["DATABASE_PATH"]) if "DATABASE_PATH" in os.environ else _default
+
+# Fail loud at import time if the file is absent — never silently create an empty DB.
+if not DB_PATH.is_file():
+    raise FileNotFoundError(
+        f"gRPC catalog DB not found at {DB_PATH}. "
+        "Set DATABASE_PATH or ensure catalog.db exists."
+    )
 
 
 def get_connection() -> sqlite3.Connection:
