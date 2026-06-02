@@ -1,0 +1,6 @@
+SOAP/src/bin/
+SOAP/src/obj/
+SOAP/tests/
+SOAP/.vs/
+SOAP/**/*.user
+SOAP/**/TestResults/

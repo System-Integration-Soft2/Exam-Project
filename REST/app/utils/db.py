@@ -35,11 +35,14 @@ async def init_db(settings, seed_sql_path: str = "seed.sql") -> None:
         await conn.executescript(seed_sql)
         await conn.commit()
 
-        # Step 2: admin user (REST-specific; guarded by row count)
-        cursor = await conn.execute("SELECT COUNT(*) FROM users")
-        user_count = (await cursor.fetchone())[0]
+        # Step 2: admin user (REST-specific; guarded by existence check)
+        cursor = await conn.execute(
+            "SELECT COUNT(*) FROM users WHERE username = ?",
+            (settings.SEED_ADMIN_USERNAME,),
+        )
+        admin_exists = (await cursor.fetchone())[0] > 0
 
-        if user_count == 0:
+        if not admin_exists:
             password_bytes = settings.SEED_ADMIN_PASSWORD.encode("utf-8")
             password_hash = bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
             await conn.execute(
@@ -52,7 +55,7 @@ async def init_db(settings, seed_sql_path: str = "seed.sql") -> None:
             await conn.commit()
             logger.info("Admin user '%s' seeded.", settings.SEED_ADMIN_USERNAME)
         else:
-            logger.debug("Users table already populated; skipping admin seed.")
+            logger.debug("Admin user '%s' already exists; skipping admin seed.", settings.SEED_ADMIN_USERNAME)
 
         # Seed the fixture tester user used by Postman/pytest non-admin tests.
         # Hardcoded credentials (tester/tester123) — not configurable because every

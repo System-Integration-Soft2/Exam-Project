@@ -9,11 +9,28 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./catalog.db:/data/catalog.db
+      - ./data:/data
     env_file:
       - .env
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  websocket-api:
+    build:
+      context: .
+      dockerfile: WEBSOCKET/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -31,6 +48,23 @@ services:
       interval: 5s
       timeout: 3s
       retries: 3
+
+  soap-api:
+    build:
+      context: .
+      dockerfile: SOAP/Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   redis-data:

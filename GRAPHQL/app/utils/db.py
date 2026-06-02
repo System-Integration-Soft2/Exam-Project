@@ -8,15 +8,22 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-# DATABASE_PATH Docker via .env
-# catalog.db local dev from repo root
-_DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent.parent.parent / "catalog.db"
-DB_PATH = Path(os.environ.get("DATABASE_PATH", _DEFAULT_DB_PATH))
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+_DEFAULT_DB_CANDIDATES = (
+    _REPO_ROOT / "data" / "catalog.db",
+    _REPO_ROOT / "catalog.db",
+)
+
+_configured_db_path = os.environ.get("DATABASE_PATH")
+if _configured_db_path:
+    DB_PATH = Path(_configured_db_path)
+else:
+    DB_PATH = next((path for path in _DEFAULT_DB_CANDIDATES if path.is_file()), _DEFAULT_DB_CANDIDATES[0])
 
 if not DB_PATH.is_file():
     raise FileNotFoundError(
         f"Database not found at {DB_PATH}. "
-        "Set DATABASE_PATH or ensure catalog.db exists at the repo root."
+        "Set DATABASE_PATH or ensure catalog.db exists at the repo root or data/catalog.db."
     )
 
 
