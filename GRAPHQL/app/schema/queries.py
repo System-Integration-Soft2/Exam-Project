@@ -23,7 +23,6 @@ class Query:
         self,
         genre: Optional[str] = None,
         year: Optional[int] = None,
-        search: Optional[str] = None,
         limit: int = DEFAULT_PAGE_SIZE,
         offset: int = 0,
     ) -> list[Movie]:
@@ -34,7 +33,6 @@ class Query:
         rows = movies_service.get_all(
             genre=genre,
             year=year,
-            search=search,
             limit=limit,
             offset=offset,
         )

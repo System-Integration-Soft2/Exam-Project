@@ -32,14 +32,17 @@ def get_by_id(movie_id: int):
 def get_all(
     genre: Optional[str] = None,
     year: Optional[int] = None,
-    search: Optional[str] = None,
     limit: int = 20,
     offset: int = 0,
 ):
-    """Fetch movies with optional filtering and pagination."""
-    limit = max(1, min(limit, 100))
-    offset = max(0, offset)
+    """
+    Fetch movies with optional filtering and pagination.
 
+    `limit` and `offset` are expected to be clamped by the caller
+    (the resolver in queries.py, using the bounds in app.config), so
+    this layer does not re-clamp. That keeps a single source of truth
+    for the pagination limits.
+    """
     where_clauses: list[str] = []
     params: list[object] = []
 
@@ -60,19 +63,6 @@ def get_all(
     if year is not None:
         where_clauses.append("m.release_year = ?")
         params.append(year)
-
-    if search:
-        where_clauses.append(
-            """
-            (
-                LOWER(m.title) LIKE ?
-                OR LOWER(m.director) LIKE ?
-                OR LOWER(m.synopsis) LIKE ?
-            )
-            """
-        )
-        pattern = f"%{search.lower()}%"
-        params.extend([pattern, pattern, pattern])
 
     where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
     params.extend([limit, offset])
@@ -229,6 +219,13 @@ def update(
 
         return _fetch_movie_row(conn, movie_id)
 
+
+def delete(movie_id: int) -> None:
+    """Delete a movie. Cascades to movie_genres and reviews."""
+    with get_db() as conn:
+        cursor = conn.execute("DELETE FROM movies WHERE id = ?", (movie_id,))
+        if cursor.rowcount == 0:
+            raise ValueError(f"Movie with id {movie_id} does not exist.")
 
 # --- Private helpers --------------------------------------------------------
 

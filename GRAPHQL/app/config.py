@@ -6,11 +6,12 @@ Other modules import from this file rather than defining their own
 constants, so there is a single source of truth for every limit.
 
 GraphQL has no built-in guards against resource-exhaustion attacks
-(large pages, deep recursive queries, alias abuse), so these limits
-are enforced explicitly:
+(large pages, deep recursive queries, alias abuse, oversized
+documents), so these limits are enforced explicitly:
 
   - Resolver level: pagination clamping (see queries.py).
-  - Schema level: QueryDepthLimiter, MaxAliasesLimiter (see utils/security.py).
+  - Schema level: QueryDepthLimiter, MaxAliasesLimiter, MaxTokensLimiter
+    (see utils/security.py).
 """
 
 # --- Pagination ------------------------------------------------------------

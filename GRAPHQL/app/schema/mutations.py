@@ -63,3 +63,9 @@ class Mutation:
             genre_ids=[int(gid) for gid in genre_ids] if genre_ids is not None else None,
         )
         return movie_from_row(row)
+    
+    @strawberry.mutation
+    def delete_movie(self, id: strawberry.ID) -> bool:
+        """Delete a movie by id. Returns True; errors if not found."""
+        movies_service.delete(int(id))
+        return True
