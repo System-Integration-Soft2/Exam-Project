@@ -63,5 +63,5 @@ To populate the database with some reviews for trying out the streaming endpoint
 To create a single review while the stream is running, run:
 
 ```bash
-./WEBSOCKET/scripts/create-review.sh <movie_id> <rating> "<comment>"
+./WEBSOCKET/scripts/add-review.sh <movie_id> <rating> "<comment>"
 ```
