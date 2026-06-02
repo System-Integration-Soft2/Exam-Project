@@ -102,6 +102,10 @@ async def logout(
         await denylist_set(redis_client, access_payload["jti"], access_ttl)
 
     refresh_payload = decode_token(refresh_token_str, settings)
+
+    if refresh_payload.get("type") != "refresh":
+        raise AppError("unauthorized", "Invalid token type", 401)
+
     refresh_ttl = max(0, refresh_payload["exp"] - now)
     if refresh_ttl > 0:
         await denylist_set(redis_client, refresh_payload["jti"], refresh_ttl)
