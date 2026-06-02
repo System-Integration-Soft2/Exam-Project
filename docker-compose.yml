@@ -66,5 +66,14 @@ services:
       retries: 3
       start_period: 30s
 
+  grpc-api:
+    build:
+      context: .
+      dockerfile: GRPC/Dockerfile
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./data:/data
+
 volumes:
   redis-data:

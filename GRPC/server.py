@@ -1,16 +1,3 @@
-"""
-gRPC server for the catalog service.
-
-Implements:
-  - GetMovie         (unary)         — fetch one movie with its genres
-  - LiveReviewFeed   (bidi-stream)   — push new reviews for subscribed movies
-
-Security:
-  - SQL-injection: all queries use parameterized statements (see db.py)
-  - XSS:          all outgoing strings are HTML-escaped (see security.py)
-  - CSRF:         not applicable to gRPC — see README.md
-"""
-
 import sys
 import time
 import logging
@@ -20,7 +7,6 @@ from concurrent import futures
 
 import grpc
 
-# Make the `generated/` folder importable
 sys.path.insert(0, str(Path(__file__).resolve().parent / "generated"))
 
 import catalog_pb2
@@ -36,8 +22,6 @@ POLL_INTERVAL_SECONDS = 2
 
 
 class CatalogServicer(catalog_pb2_grpc.CatalogServiceServicer):
-
-    # ── Unary RPC ────────────────────────────────────────────────────────────
 
     def GetMovie(self, request, context):
         try:
@@ -60,14 +44,7 @@ class CatalogServicer(catalog_pb2_grpc.CatalogServiceServicer):
             genres=[security.sanitize_output(g) for g in movie["genres"]],
         )
 
-    # ── Bidirectional Streaming RPC ──────────────────────────────────────────
-
     def LiveReviewFeed(self, request_iterator, context):
-        """
-        Client streams movie IDs to subscribe to.
-        Server polls the database and streams back any new review for those
-        movies. The set of subscribed IDs grows as the client sends more.
-        """
         subscribed_ids: set[int] = set()
         last_review_id = db.fetch_latest_review_id()
 
