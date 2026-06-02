@@ -89,3 +89,8 @@ app.include_router(graphql_app, prefix="/graphql")
 def health_check() -> dict:
     """Return a simple status payload to confirm the server is up."""
     return {"status": "ok", "service": "graphql-api"}
+
+# Additional health check endpoint - Docker's default.
+@app.get("/healthz")
+def health_check() -> dict:
+    return {"status": "ok", "service": "graphql-api"}

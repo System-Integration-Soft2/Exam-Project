@@ -2,14 +2,22 @@
 Database connection management for the GraphQL API.
 """
 
+import os
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
+# DATABASE_PATH Docker via .env
+# catalog.db local dev from repo root
+_DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent.parent.parent / "catalog.db"
+DB_PATH = Path(os.environ.get("DATABASE_PATH", _DEFAULT_DB_PATH))
 
-# Absolute path to catalog.db, independent of the working directory.
-DB_PATH = Path(__file__).resolve().parent.parent.parent.parent / "catalog.db"
+if not DB_PATH.is_file():
+    raise FileNotFoundError(
+        f"Database not found at {DB_PATH}. "
+        "Set DATABASE_PATH or ensure catalog.db exists at the repo root."
+    )
 
 
 def get_connection() -> sqlite3.Connection:
