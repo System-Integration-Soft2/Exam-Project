@@ -1423,13 +1423,13 @@
           ]
         },
         {
-          "name": "GET /reviews/1 returns 200 with _links.self and _links.movie",
+          "name": "GET /reviews/101 returns 200 with _links.self and _links.movie",
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/v1/reviews/1",
+              "raw": "{{base_url}}/api/v1/reviews/101",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "reviews", "1"]
+              "path": ["api", "v1", "reviews", "101"]
             }
           },
           "event": [
@@ -1443,7 +1443,7 @@
                   "    const body = pm.response.json();",
                   "    pm.expect(body._links).to.have.property('self');",
                   "    pm.expect(body._links).to.have.property('movie');",
-                  "    pm.expect(body._links.self.href).to.equal('/api/v1/reviews/1');",
+                  "    pm.expect(body._links.self.href).to.equal('/api/v1/reviews/101');",
                   "    pm.expect(body._links.movie.href).to.match(/\\/api\\/v1\\/movies\\/\\d+/);",
                   "});"
                 ]
@@ -1472,6 +1472,65 @@
                   "    const body = pm.response.json();",
                   "    pm.expect(body.code).to.equal('not_found');",
                   "    pm.expect(body._links.list.href).to.equal('/api/v1/reviews');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /reviews?q=masterpiece returns only reviews whose comment matches",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/reviews?q=masterpiece",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reviews"],
+              "query": [{ "key": "q", "value": "masterpiece" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Search returns at least one match and every item comment contains the term', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.items).to.be.an('array');",
+                  "    pm.expect(body.total).to.be.at.least(1);",
+                  "    body.items.forEach(r => {",
+                  "        pm.expect(String(r.comment).toLowerCase()).to.include('masterpiece');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /reviews?q=zzznomatch returns 200 with total=0 and empty items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/reviews?q=zzznomatch",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reviews"],
+              "query": [{ "key": "q", "value": "zzznomatch" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('No-match search returns total=0 and empty items', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.total).to.equal(0);",
+                  "    pm.expect(body.items).to.be.an('array').that.is.empty;",
                   "});"
                 ]
               }

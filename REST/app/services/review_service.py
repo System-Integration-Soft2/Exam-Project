@@ -1,8 +1,10 @@
+from app.utils.db import escape_like
 from app.utils.exceptions import AppError
 
 
 async def list_reviews(
     db,
+    q: str | None,
     movie_id: int | None,
     page: int,
     size: int,
@@ -11,31 +13,38 @@ async def list_reviews(
 
     size is clamped to 100; the router enforces ge=1 via Query.
     If movie_id is provided, only reviews for that movie are returned.
+    If q is provided, reviews are filtered to those whose comment
+    contains the search text (case-insensitive). When both q and
+    movie_id are given, both conditions must match.
     """
     size = min(size, 100)
     offset = (page - 1) * size
 
+    conditions: list[str] = []
+    params: list = []
+
     if movie_id is not None:
-        count_cursor = await db.execute(
-            "SELECT COUNT(*) FROM reviews WHERE movie_id = ?",
-            (movie_id,),
-        )
-        total = (await count_cursor.fetchone())[0]
+        conditions.append("movie_id = ?")
+        params.append(movie_id)
 
-        cursor = await db.execute(
-            "SELECT id, movie_id, user_id, rating, comment, created_at "
-            "FROM reviews WHERE movie_id = ? ORDER BY id LIMIT ? OFFSET ?",
-            (movie_id, size, offset),
-        )
-    else:
-        count_cursor = await db.execute("SELECT COUNT(*) FROM reviews")
-        total = (await count_cursor.fetchone())[0]
+    if q and q.strip():
+        pattern = escape_like(q.strip())
+        conditions.append("comment LIKE ? ESCAPE '\\'")
+        params.append(pattern)
 
-        cursor = await db.execute(
-            "SELECT id, movie_id, user_id, rating, comment, created_at "
-            "FROM reviews ORDER BY id LIMIT ? OFFSET ?",
-            (size, offset),
-        )
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+    count_cursor = await db.execute(
+        f"SELECT COUNT(*) FROM reviews {where}",
+        params,
+    )
+    total = (await count_cursor.fetchone())[0]
+
+    cursor = await db.execute(
+        f"SELECT id, movie_id, user_id, rating, comment, created_at "
+        f"FROM reviews {where} ORDER BY id LIMIT ? OFFSET ?",
+        params + [size, offset],
+    )
 
     rows = await cursor.fetchall()
     items = [

@@ -31,13 +31,14 @@ def _build_review_response(row: dict) -> dict:
 
 @router.get("/", response_model=ReviewPage)
 async def list_reviews_endpoint(
+    q: str | None = Query(default=None),
     movie_id: int | None = Query(default=None, ge=1),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1),
     db=Depends(get_db),
 ):
-    """List reviews with optional movie_id filter and pagination."""
-    items_raw, total = await list_reviews(db, movie_id, page, size)
+    """List reviews with optional comment search (q), movie_id filter, and pagination."""
+    items_raw, total = await list_reviews(db, q, movie_id, page, size)
     effective_size = min(size, 100)
     items = [
         ReviewResponse(**_build_review_response(row))
@@ -48,7 +49,7 @@ async def list_reviews_endpoint(
         page=page,
         size=effective_size,
         total=total,
-        links=page_links("/api/v1/reviews", page, effective_size, total, movie_id=movie_id),
+        links=page_links("/api/v1/reviews", page, effective_size, total, q=q, movie_id=movie_id),
     )
 
 
