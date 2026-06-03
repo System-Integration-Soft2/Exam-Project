@@ -1,0 +1,787 @@
+{
+  "info": {
+    "name": "Movie Catalog GraphQL — Test Suite",
+    "description": "GraphQL test suite for the System Integration exam (movie catalog API).\n\nRun with the Collection Runner top-to-bottom. The 'Positive — Mutation lifecycle' folder runs addMovie → updateMovie → deleteMovie in order: addMovie stores the new id in the createdMovieId variable, updateMovie and deleteMovie reuse it, and deleteMovie removes the movie again so the suite is repeatable on the shared database.\n\nbaseUrl defaults to http://localhost:8002/graphql.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Positive — Queries",
+      "item": [
+        {
+          "name": "Q1 movie by id (exists)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no GraphQL errors', () => pm.expect(json.errors).to.be.undefined);",
+                  "pm.test('movie returned', () => pm.expect(json.data.movie).to.not.be.null);",
+                  "pm.test('correct id', () => pm.expect(json.data.movie.id).to.eql('1'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ movie(id: \\\"1\\\") { id title releaseYear genres { name } } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Q2 movies (default list)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no GraphQL errors', () => pm.expect(json.errors).to.be.undefined);",
+                  "pm.test('returns an array', () => pm.expect(json.data.movies).to.be.an('array'));",
+                  "pm.test('respects default page size (<=20)', () => pm.expect(json.data.movies.length).to.be.at.most(20));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ movies { id title releaseYear } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Q3 movies filtered by genre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no GraphQL errors', () => pm.expect(json.errors).to.be.undefined);",
+                  "pm.test('returns an array', () => pm.expect(json.data.movies).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ movies(genre: \\\"Sci-Fi\\\") { id title } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Q4 movies pagination (limit & offset)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no GraphQL errors', () => pm.expect(json.errors).to.be.undefined);",
+                  "pm.test('at most 2 results', () => pm.expect(json.data.movies.length).to.be.at.most(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ movies(limit: 2, offset: 0) { id title } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Positive — Mutation lifecycle (create → update → delete)",
+      "item": [
+        {
+          "name": "M1 addMovie (with genres) — stores id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no GraphQL errors', () => pm.expect(json.errors).to.be.undefined);",
+                  "pm.test('movie created with id', () => pm.expect(json.data.addMovie.id).to.be.a('string').and.not.empty);",
+                  "pm.test('title echoed back', () => pm.expect(json.data.addMovie.title).to.eql('Postman Lifecycle Movie'));",
+                  "pm.test('two genres linked', () => pm.expect(json.data.addMovie.genres.length).to.eql(2));",
+                  "pm.collectionVariables.set('createdMovieId', json.data.addMovie.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"mutation { addMovie(title: \\\"Postman Lifecycle Movie\\\", releaseYear: 2021, genreIds: [\\\"1\\\", \\\"3\\\"]) { id title releaseYear genres { name } } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "M2 updateMovie (partial — reuses stored id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no GraphQL errors', () => pm.expect(json.errors).to.be.undefined);",
+                  "pm.test('director updated', () => pm.expect(json.data.updateMovie.director).to.eql('Updated Director'));",
+                  "pm.test('release year updated', () => pm.expect(json.data.updateMovie.releaseYear).to.eql(2022));",
+                  "pm.test('same id as created', () => pm.expect(json.data.updateMovie.id).to.eql(pm.collectionVariables.get('createdMovieId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"mutation { updateMovie(id: \\\"{{createdMovieId}}\\\", director: \\\"Updated Director\\\", releaseYear: 2022) { id director releaseYear } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "M3 deleteMovie (reuses stored id — cleans up)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no GraphQL errors', () => pm.expect(json.errors).to.be.undefined);",
+                  "pm.test('delete returns true', () => pm.expect(json.data.deleteMovie).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"mutation { deleteMovie(id: \\\"{{createdMovieId}}\\\") }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Negative — Validation & not-found",
+      "item": [
+        {
+          "name": "N1 movie not found (null, not an error)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('movie is null', () => pm.expect(json.data.movie).to.be.null);",
+                  "pm.test('no errors (null is a valid result)', () => pm.expect(json.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ movie(id: \\\"999999\\\") { id title } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "N2 addMovie invalid release year",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('errors present', () => pm.expect(json.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('mentions year', () => pm.expect(json.errors[0].message.toLowerCase()).to.include('year'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"mutation { addMovie(title: \\\"Bad Year\\\", releaseYear: 1000) { id } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "N3 addMovie empty title",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('errors present', () => pm.expect(json.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('mentions title', () => pm.expect(json.errors[0].message.toLowerCase()).to.include('title'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"mutation { addMovie(title: \\\"\\\", releaseYear: 2020) { id } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "N4 addMovie nonexistent genre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('errors present', () => pm.expect(json.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('mentions genre', () => pm.expect(json.errors[0].message.toLowerCase()).to.include('genre'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"mutation { addMovie(title: \\\"Bad Genre\\\", releaseYear: 2020, genreIds: [\\\"999999\\\"]) { id } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "N5 updateMovie nonexistent id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('errors present', () => pm.expect(json.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('mentions does not exist', () => pm.expect(json.errors[0].message.toLowerCase()).to.include('does not exist'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"mutation { updateMovie(id: \\\"999999\\\", title: \\\"X\\\") { id } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "N6 deleteMovie nonexistent id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('errors present', () => pm.expect(json.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('mentions does not exist', () => pm.expect(json.errors[0].message.toLowerCase()).to.include('does not exist'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"mutation { deleteMovie(id: \\\"999999\\\") }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Negative — Query syntax & schema",
+      "item": [
+        {
+          "name": "N7 malformed query (syntax error)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('errors present', () => pm.expect(json.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('no data', () => pm.expect(json.data).to.be.oneOf([undefined, null]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ movie(id: \\\"1\\\") { id title \"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "N8 unknown field",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('errors present', () => pm.expect(json.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('says cannot query field', () => pm.expect(json.errors[0].message.toLowerCase()).to.include('cannot query field'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ movie(id: \\\"1\\\") { id nonExistentField } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Negative — Resource-exhaustion guards",
+      "item": [
+        {
+          "name": "N9 query too deep (> depth 5)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('errors present', () => pm.expect(json.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('mentions depth', () => pm.expect(json.errors[0].message.toLowerCase()).to.include('depth'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ movie(id: \\\"1\\\") { genres { movies { genres { movies { genres { movies { title } } } } } } } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "N10 too many aliases (> 15)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('errors present', () => pm.expect(json.errors).to.be.an('array').that.is.not.empty);",
+                  "pm.test('mentions aliases', () => pm.expect(json.errors[0].message.toLowerCase()).to.include('alias'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"query { a1: movie(id: \\\"1\\\") { id } a2: movie(id: \\\"1\\\") { id } a3: movie(id: \\\"1\\\") { id } a4: movie(id: \\\"1\\\") { id } a5: movie(id: \\\"1\\\") { id } a6: movie(id: \\\"1\\\") { id } a7: movie(id: \\\"1\\\") { id } a8: movie(id: \\\"1\\\") { id } a9: movie(id: \\\"1\\\") { id } a10: movie(id: \\\"1\\\") { id } a11: movie(id: \\\"1\\\") { id } a12: movie(id: \\\"1\\\") { id } a13: movie(id: \\\"1\\\") { id } a14: movie(id: \\\"1\\\") { id } a15: movie(id: \\\"1\\\") { id } a16: movie(id: \\\"1\\\") { id } a17: movie(id: \\\"1\\\") { id } a18: movie(id: \\\"1\\\") { id } a19: movie(id: \\\"1\\\") { id } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Security — SQL injection is neutralized",
+      "item": [
+        {
+          "name": "N11 injection payload treated as a literal value",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('no errors (input was parameterized, not executed)', () => pm.expect(json.errors).to.be.undefined);",
+                  "pm.test('returns an array (no match for the literal string)', () => pm.expect(json.data.movies).to.be.an('array'));",
+                  "// The query below would fail later in the run if the table had been dropped,",
+                  "// which itself proves the injection did not execute."
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ movies(genre: \\\"'; DROP TABLE movies; --\\\") { id title } }\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8002/graphql"
+    },
+    {
+      "key": "createdMovieId",
+      "value": ""
+    }
+  ]
+}

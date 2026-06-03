@@ -75,5 +75,22 @@ services:
     volumes:
       - ./data:/data
 
+  graphql-api:
+    build:
+      context: .
+      dockerfile: GRAPHQL/Dockerfile
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      
 volumes:
   redis-data:

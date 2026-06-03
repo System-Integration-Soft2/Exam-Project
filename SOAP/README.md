@@ -1,7 +1,7 @@
 # SOAP Movies Service
 
 A C# .NET + CoreWCF SOAP service exposing `ListMovies`, `GetMovieById`,
-`CreateMovie`, and `UpdateMovie` against the shared `data/catalog.db` SQLite db file.
+`CreateMovie`, `UpdateMovie`, and `DeleteMovie` against the shared `data/catalog.db` SQLite db file.
 Runs on port 8001
 
 ## Service surface
