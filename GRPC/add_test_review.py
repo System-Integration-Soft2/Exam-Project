@@ -1,10 +1,5 @@
 """
-Helper script to insert a test review into the database.
-Used to demonstrate the LiveReviewFeed streaming RPC.
-
-Usage:
-  python add_test_review.py <movie_id> <rating> "<comment>"
-  python add_test_review.py 1 9 "Mind-blowing!"
+Usage: python add_test_review.py <movie_id> <rating> "<comment>"
 """
 
 import sys
@@ -15,15 +10,11 @@ DB_PATH = Path(__file__).resolve().parent.parent / "data" / "catalog.db"
 
 
 def ensure_test_user(conn: sqlite3.Connection) -> int:
-    """Create a test user if none exists, return its id."""
     row = conn.execute("SELECT id FROM users WHERE username = ?", ("test_user",)).fetchone()
     if row:
         return row[0]
     cursor = conn.execute(
-        """
-        INSERT INTO users (username, email, password_hash, role)
-        VALUES (?, ?, ?, ?)
-        """,
+        "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)",
         ("test_user", "test@example.com", "fake_hash_for_testing", "user"),
     )
     return cursor.lastrowid
@@ -39,14 +30,11 @@ def add_review(movie_id: int, rating: int, comment: str) -> None:
         conn.execute("PRAGMA foreign_keys = ON")
         user_id = ensure_test_user(conn)
         conn.execute(
-            """
-            INSERT INTO reviews (movie_id, user_id, rating, comment)
-            VALUES (?, ?, ?, ?)
-            """,
+            "INSERT INTO reviews (movie_id, user_id, rating, comment) VALUES (?, ?, ?, ?)",
             (movie_id, user_id, rating, comment),
         )
         conn.commit()
-        print(f"✓ Added review for movie_id={movie_id}: {rating}/10 — '{comment}'")
+        print(f"Added review for movie_id={movie_id}: {rating}/10 - '{comment}'")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Movie Catalog GraphQL — Test Suite",
-    "description": "GraphQL test suite for the System Integration exam (movie catalog API).\n\nRun with the Collection Runner top-to-bottom. The 'Positive — Mutation lifecycle' folder runs addMovie → updateMovie → deleteMovie in order: addMovie stores the new id in the createdMovieId variable, updateMovie and deleteMovie reuse it, and deleteMovie removes the movie again so the suite is repeatable on the shared database.\n\nbaseUrl defaults to http://localhost:8000/graphql.",
+    "description": "GraphQL test suite for the System Integration exam (movie catalog API).\n\nRun with the Collection Runner top-to-bottom. The 'Positive — Mutation lifecycle' folder runs addMovie → updateMovie → deleteMovie in order: addMovie stores the new id in the createdMovieId variable, updateMovie and deleteMovie reuse it, and deleteMovie removes the movie again so the suite is repeatable on the shared database.\n\nbaseUrl defaults to http://localhost:8002/graphql.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -777,7 +777,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8000/graphql"
+      "value": "http://localhost:8002/graphql"
     },
     {
       "key": "createdMovieId",
