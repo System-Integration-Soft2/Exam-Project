@@ -5,10 +5,6 @@ Types describe the public GraphQL schema.
 Services fetch database rows.
 Mapper functions convert rows to Strawberry types.
 
-Nested fields (@strawberry.field) are resolved lazily: a client that
-asks only for `movie { title }` never triggers genre queries.
-The bidirectional traversal (Movie -> Genre -> Movie) is safe because
-QueryDepthLimiter caps document depth (see MAX_QUERY_DEPTH in app.config).
 """
 
 from __future__ import annotations

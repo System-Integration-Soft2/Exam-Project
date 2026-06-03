@@ -25,10 +25,6 @@ MAX_PAGE_SIZE = 100
 # Maximum nesting depth of a GraphQL document. Mitigates recursive
 # queries like `movie { genres { movies { genres { ... } } } }`.
 #
-# Our schema's deepest legitimate paths are:
-#   movie -> genres -> movies            = depth 3
-#   movie -> genres -> movies -> genres  = depth 4
-# A limit of 5 accommodates all real queries and stops abuse.
 MAX_QUERY_DEPTH = 5
 
 # Maximum number of field aliases in a single document. Mitigates

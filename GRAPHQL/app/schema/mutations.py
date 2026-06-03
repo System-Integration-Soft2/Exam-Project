@@ -1,12 +1,4 @@
 """GraphQL mutations for write operations.
-
-Two write operations on the movie catalog: addMovie and updateMovie.
-Both return the resulting Movie so the client can request whatever
-fields it needs in the same request (e.g. the new id, or the updated
-genre list).
-
-updateMovie does a partial update: any field left out keeps its
-existing value. The client only needs to send what it wants to change.
 """
 
 from typing import Optional
