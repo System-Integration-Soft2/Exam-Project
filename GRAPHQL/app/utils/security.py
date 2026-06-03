@@ -33,10 +33,11 @@ requests.
 
 from strawberry.extensions import (
     MaxAliasesLimiter,
+    MaxTokensLimiter,
     QueryDepthLimiter,
 )
 
-from app.config import MAX_ALIASES, MAX_QUERY_DEPTH
+from app.config import MAX_ALIASES, MAX_QUERY_DEPTH, MAX_TOKENS
 
 
 def get_security_extensions() -> list:
@@ -48,6 +49,7 @@ def get_security_extensions() -> list:
     and main.py doesn't grow with security concerns.
     """
     return [
-       QueryDepthLimiter(max_depth=MAX_QUERY_DEPTH),
-       MaxAliasesLimiter(max_alias_count=MAX_ALIASES),
-   ]
+        QueryDepthLimiter(max_depth=MAX_QUERY_DEPTH),
+        MaxAliasesLimiter(max_alias_count=MAX_ALIASES),
+        MaxTokensLimiter(max_token_count=MAX_TOKENS),
+    ]

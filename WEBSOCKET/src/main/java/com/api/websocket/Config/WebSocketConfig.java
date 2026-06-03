@@ -24,7 +24,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(unaryHandler, "/ws/movies/detail")
                         .setAllowedOriginPatterns("http://localhost:3000");
 
-        registry.addHandler(streamingHandler, "/ws/movies/stream")
+        registry.addHandler(streamingHandler, "/ws/movies/reviews/stream")
                 .setAllowedOriginPatterns("http://localhost:3000");
 
     }

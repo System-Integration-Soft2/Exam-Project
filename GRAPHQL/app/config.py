@@ -31,3 +31,8 @@ MAX_QUERY_DEPTH = 5
 # alias abuse where a client requests the same expensive field many
 # times under different names to amplify load.
 MAX_ALIASES = 15
+
+# Maximum number of tokens in a single GraphQL document. Catches
+# shallow-but-enormous payloads that slip past the depth and alias
+# limits (e.g. a single field repeated thousands of times inline).
+MAX_TOKENS = 1000
