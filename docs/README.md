@@ -59,7 +59,7 @@ session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
 Begge WebSocket-endpoints holder forbindelsen åben — det er selve WebSocket-protokollens natur. Forskellen mellem Unary og Bidirectional Streaming er beskedmønsteret:
 
 - **Unary** (`/ws/movies/detail`): request-response — klienten sender én besked, serveren svarer med én besked. Gentages så mange gange man vil på samme forbindelse.
-- **Bidirectional Streaming** (`/ws/movies/stream`): begge sider kan sende beskeder uafhængigt af hinanden til enhver tid. Klienten sender abonnementer, serveren pusher nye anmeldelser — uden at vente på hinanden.
+- **Bidirectional Streaming** (`/ws/movies/reviews/stream`): begge sider kan sende beskeder uafhængigt af hinanden til enhver tid. Klienten sender abonnementer, serveren pusher nye anmeldelser — uden at vente på hinanden.
 
 I gRPC implementeres dette ved hjælp af keywordet `stream` i `.proto` filen, som gør det muligt at streame beskeder i begge retninger over samme forbindelse. Klienten streamer film-id'er, og serveren streamer anmeldelser tilbage.
 

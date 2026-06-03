@@ -6,7 +6,7 @@
 2. WebSocket URL:
 
    * Unary endpoint: `ws://localhost:8080/ws/movies/detail`
-   * Streaming endpoint: `ws://localhost:8080/ws/movies/stream`
+   * Streaming endpoint: `ws://localhost:8080/ws/movies/reviews/stream`
 3. Click **Connect**
 4. Send the request payload as JSON in the message field.
 
@@ -91,7 +91,7 @@ This demonstrates that the WebSocket service correctly handles requests for non-
 
 ## Test 4 — StreamMovie (positive)
 
-**Endpoint:** `/ws/movies/stream`
+**Endpoint:** `/ws/movies/reviews/stream`
 
 **Request:**
 
@@ -123,7 +123,7 @@ This demonstrates that the bidirectional streaming operation keeps the connectio
 
 ## Test 5 — StreamMovie (negative — malformed JSON)
 
-**Endpoint:** `/ws/movies/stream`
+**Endpoint:** `/ws/movies/reviews/stream`
 
 **Request:**
 
@@ -146,7 +146,7 @@ This demonstrates that the streaming endpoint validates each incoming message in
 
 ## Test 6 — StreamMovie (negative — not found)
 
-**Endpoint:** `/ws/movies/stream`
+**Endpoint:** `/ws/movies/reviews/stream`
 
 **Request:**
 

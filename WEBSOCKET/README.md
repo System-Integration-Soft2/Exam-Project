@@ -7,7 +7,7 @@ Spring Boot WebSocket service exposing two endpoints over a shared SQLite catalo
 | Path | Type | Description |
 |------|------|-------------|
 | `ws://localhost:8080/ws/movies/detail` | Unary | Send `{"movieId": N}`, receive one `MovieDetailResponse` JSON frame. Connection stays open; send more requests on the same socket. |
-| `ws://localhost:8080/ws/movies/stream` | Bidirectional | Send `{"movieId": N}` to subscribe to reviews for that movie. Server pushes `ReviewResponse` frames for that movie every ~2 s as new reviews appear. |
+| `ws://localhost:8080/ws/movies/reviews/stream` | Bidirectional | Send `{"movieId": N}` to subscribe to reviews for that movie. Server pushes `ReviewResponse` frames for that movie every ~2 s as new reviews appear. |
 
 ### Request format (both endpoints)
 
