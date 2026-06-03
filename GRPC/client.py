@@ -1,9 +1,7 @@
 """
-Simple test client for the gRPC catalog service.
-
 Usage:
-  python client.py get 1            # unary: fetch movie with id 1
-  python client.py feed 1 2 3       # streaming: subscribe to reviews for movies 1, 2, 3
+  python client.py get <movie_id>
+  python client.py feed <movie_id> [<movie_id> ...]
 """
 
 import sys
@@ -25,7 +23,6 @@ def call_get_movie(movie_id: int) -> None:
         stub = catalog_pb2_grpc.CatalogServiceStub(channel)
         try:
             response = stub.GetMovie(catalog_pb2.MovieRequest(movie_id=movie_id))
-            print("── Movie ──────────────────────────────")
             print(f"  ID:       {response.id}")
             print(f"  Title:    {response.title}")
             print(f"  Year:     {response.release_year}")
@@ -40,7 +37,7 @@ def call_get_movie(movie_id: int) -> None:
 def call_live_review_feed(movie_ids: list[int]) -> None:
     def request_generator():
         for mid in movie_ids:
-            print(f"→ Subscribing to movie_id={mid}")
+            print(f"Subscribing to movie_id={mid}")
             yield catalog_pb2.ReviewSubscribeRequest(movie_id=mid)
             time.sleep(0.2)
 
@@ -49,10 +46,7 @@ def call_live_review_feed(movie_ids: list[int]) -> None:
         print(f"Listening for new reviews on movies {movie_ids}. Ctrl-C to stop.")
         try:
             for update in stub.LiveReviewFeed(request_generator()):
-                print(
-                    f"← New review: [{update.movie_title}] "
-                    f"rating={update.rating}/10  '{update.comment}'  ({update.created_at})"
-                )
+                print(f"[{update.movie_title}] rating={update.rating}/10  '{update.comment}'  ({update.created_at})")
         except grpc.RpcError as e:
             print(f"Error: {e.code().name} — {e.details()}")
         except KeyboardInterrupt:
